@@ -1,0 +1,231 @@
+# 앤팅(Anting) 프로젝트 규칙
+
+> 이 파일은 프로젝트 최상단에 위치하며, 모든 개발 작업의 기준이 됩니다.
+안티그래비티(Antigravity) 에이전트는 작업 시작 전 반드시 이 파일을 먼저 읽고 모든 규칙을 준수해야 합니다.
+> 
+
+---
+
+## Section 1 — 기술 스택 (Tech Stack)
+
+### 프론트엔드
+
+- **Framework**: Next.js 14 (App Router)
+- **Platform**: Firebase Hosting
+- **Language**: TypeScript (strict 모드, `any` 사용 금지)
+- **Styling**: Tailwind CSS + CSS Variables
+- **폰트**: Pretendard (CDN), DM Serif Display (Google Fonts)
+- **아이콘**: Lucide React
+- **에디터**: TipTap (리치 텍스트)
+- **폼 검증**: React Hook Form + Zod
+- **차트**: Recharts
+- **엑셀 처리**: SheetJS (xlsx)
+
+### 백엔드
+
+- **Platform**: Firebase (전체 백엔드)
+- **Database**: Firebase Firestore
+- **Authentication**: Firebase Auth (카카오·네이버 소셜 로그인)
+- **Storage**: Firebase Storage
+- **Functions**: Firebase Cloud Functions (Node.js 20)
+- **Scheduler**: Firebase Cloud Scheduler
+- **Hosting**: Firebase Hosting
+
+### AI / 외부 API
+
+- **텍스트 생성**: Gemini Pro API (`@google/generative-ai`)
+- **이미지 생성**: Vertex AI Imagen API
+- **영상 생성**: Creatomate API
+- **검색**: Algolia
+- **결제**: 토스페이먼츠 SDK
+- **알림**: 카카오 알림톡 + Firebase Cloud Messaging (FCM)
+- **배송**: CJ대한통운 / 롯데택배 API
+- **이메일**: SendGrid
+
+### 개발 도구
+
+- **에디터**: Google Antigravity 2.0
+- **버전 관리**: Git + GitHub
+- **배포**: Firebase CLI (`firebase deploy`)
+- **패키지 매니저**: npm
+- **환경 변수**: `.env.local` (로컬), Firebase Functions Config (서버)
+
+---
+
+## Section 2 — 개발 규칙 (Development Rules)
+
+### 2-1. 작업 완료 시 필수 절차 (매 작업마다 반드시 이행)
+
+`① 기능 구현 완료
+② 오류 검토 (TypeScript 타입 오류, 콘솔 에러, 빌드 오류 전수 확인)
+③ 문제 없음 확인 후 → Firebase 에뮬레이터 또는 스테이징에서 동작 검증
+④ 작업 결과를 .md 파일로 저장 (파일명: YYYY-MM-DD_작업명.md)
+⑤ 한국어로 완료 보고`
+
+### 2-2. 작업 완료 보고 형식 (.md 파일 + 보고 메시지)
+
+작업이 완료될 때마다 아래 형식으로 `.md` 파일을 생성하고 동일 내용을 보고합니다.
+
+markdown
+
+`# 작업 완료 보고
+
+## 작업명
+[구현한 기능명]
+
+## 작업 일시
+YYYY-MM-DD HH:MM
+
+## 구현 내용
+- [완료된 항목 1]
+- [완료된 항목 2]
+
+## 생성/수정된 파일
+- `경로/파일명.tsx` — 설명
+- `경로/파일명.ts` — 설명
+
+## 오류 검토 결과
+- TypeScript 오류: 없음 / [있으면 목록]
+- 빌드 오류: 없음 / [있으면 목록]
+- 콘솔 에러: 없음 / [있으면 목록]
+
+## 동작 확인
+- [ ] 로컬 에뮬레이터에서 정상 동작 확인
+- [ ] 모바일 뷰 정상 확인
+
+## 다음 작업
+[다음에 진행할 작업]`
+
+### 2-3. 오류 처리 원칙
+
+- TypeScript `strict` 모드 — `any` 타입 사용 절대 금지, 올바른 타입 정의 필수
+- 빌드 오류가 있으면 해결 후 보고 (오류가 있는 상태로 완료 선언 금지)
+- API 호출은 반드시 `try/catch`로 감싸고 사용자에게 에러 메시지 표시
+- Firebase Security Rules 변경 시 반드시 명시적으로 보고
+
+### 2-4. 커밋 & 배포 규칙
+
+- 커밋 메시지 형식: `feat: 기능명`, `fix: 수정내용`, `refactor: 리팩토링 내용`
+- 기능 단위로 커밋 (하나의 커밋에 여러 기능 혼재 금지)
+- 배포 명령어: `firebase deploy` (전체) 또는 `firebase deploy --only hosting` (프론트만)
+- 프로덕션 배포 전 반드시 `npm run build` 성공 확인
+
+### 2-5. 보고 언어 규칙
+
+- **모든 보고, 설명, 질문은 한국어로** 작성합니다
+- 코드 주석: 한국어 또는 영어 모두 허용
+- 변수명·함수명: 영어 (camelCase)
+- 파일명: 영어 (kebab-case) 또는 PascalCase (컴포넌트)
+
+---
+
+## Section 3 — 디자인 시스템 & 코드 컨벤션 (Design System & Code Convention)
+
+### 3-1. 앤팅 디자인 시스템
+
+### 컬러 팔레트 (tailwind.config.ts에 등록)
+
+typescript
+
+`colors: {
+  olive: {
+    DEFAULT: '#6B7C3F',   // 메인 브랜드 컬러
+    light:   '#8FA456',   // 호버, 강조
+    pale:    '#D4DBA8',   // 배경, 카드 배경
+    dark:    '#3D4A22',   // 헤더, 다크 텍스트
+  },
+  accent:  '#C8B84A',     // 골드 올리브 — 포인트, 강조 배지
+  neutral: '#F7F6F1',     // 배경 오프화이트
+  'olive-gray': '#6B6B6B', // 보조 텍스트
+}`
+
+### 타이포그래피
+
+css
+
+`/* 한국어 헤드라인 */
+font-family: 'Pretendard', sans-serif;
+/* 영문/숫자 포인트 */
+font-family: 'DM Serif Display', serif;`
+
+### 공통 컴포넌트 스펙
+
+| 요소 | 스펙 |
+| --- | --- |
+| 버튼 (Primary) | bg-olive, 흰 텍스트, border-radius: 999px, h-12 |
+| 버튼 (Secondary) | border-olive, olive 텍스트, border-radius: 999px |
+| 카드 | bg-white, border-radius: 24px, shadow-sm |
+| 인풋 | border-olive, border-radius: 12px, focus:ring-olive |
+| 배지 (상태) | border-radius: 999px, 각 상태별 색상 |
+
+### 상태 배지 컬러
+
+`모집중:    bg-olive text-white
+선발완료:  bg-blue-500 text-white
+배송중:    bg-orange-500 text-white
+리뷰중:    bg-purple-500 text-white
+완료:      bg-gray-400 text-white`
+
+### 3-2. 폴더 구조 컨벤션
+
+`/app                    → Next.js App Router 페이지
+  /(auth)               → 로그인/회원가입 관련
+  /(brand)              → 브랜드 전용 라우트
+  /(influencer)         → 인플루언서 전용 라우트
+  /(shop)               → 쇼핑 플랫폼
+  /admin                → 어드민 전용
+/components
+  /ui                   → 재사용 공통 UI (Button, Card, Badge 등)
+  /brand                → 브랜드 전용 컴포넌트
+  /influencer           → 인플루언서 전용 컴포넌트
+  /shop                 → 쇼핑 관련 컴포넌트
+/lib
+  /firebase.ts          → Firebase 초기화
+  /firestore/           → Firestore CRUD 헬퍼
+  /gemini.ts            → Gemini API 헬퍼
+  /utils.ts             → 공통 유틸 함수
+/types
+  /index.ts             → 전체 TypeScript 타입 정의
+/functions              → Firebase Cloud Functions
+/work-logs              → 작업 완료 .md 파일 저장 폴더`
+
+### 3-3. TypeScript 컨벤션
+
+typescript
+
+`// ✅ 올바른 예시
+interface Campaign {
+  id: string;
+  title: string;
+  status: 'recruiting' | 'selected' | 'delivering' | 'completed';
+  createdAt: Timestamp;
+}
+
+// ❌ 금지 — any 사용
+const data: any = await fetchData();
+
+// ✅ 올바른 예시 — 타입 명시
+const data: Campaign = await fetchCampaign(id);`
+
+### 3-4. Firebase 사용 컨벤션
+
+typescript
+
+`// Firestore 읽기 — 에러 처리 필수
+try {
+  const doc = await getDoc(docRef);
+  if (!doc.exists()) throw new Error('문서 없음');
+  return doc.data() as Campaign;
+} catch (error) {
+  console.error('캠페인 조회 실패:', error);
+  throw error;
+}
+
+// 환경 변수 — 서버측 시크릿은 Functions Config 사용
+// 클라이언트 노출 가능한 값만 NEXT_PUBLIC_ 접두사 사용`
+
+### 3-5. 반응형 브레이크포인트
+
+`모바일:   375px 기준 (기본, 모바일 퍼스트)
+태블릿:   768px (md:)
+PC:       1280px (xl:)`

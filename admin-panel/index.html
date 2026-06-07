@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>앤팅 어드민</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap" rel="stylesheet" />
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Pretendard', sans-serif;
+background: #F7F6F1; color: #1A1A1A; }
+
+/* ── 로그인 화면 ── */
+#login-screen {
+  min-height: 100vh; background: #3D4A22;
+  display: flex; align-items: center; justify-content: center;
+}
+.login-card {
+  background: white; border-radius: 24px;
+  padding: 44px 36px; width: 360px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+}
+.login-logo {
+  font-family: 'DM Serif Display', serif; color: #6B7C3F;
+  font-size: 32px; text-align: center; margin-bottom: 4px;
+}
+.login-sub {
+  color: #6B6B6B; text-align: center;
+  font-size: 13px; margin-bottom: 32px;
+}
+.login-input {
+  width: 100%; padding: 14px 16px; border-radius: 12px;
+  border: 1.5px solid #6B7C3F; font-size: 15px;
+  margin-bottom: 12px; outline: none;
+}
+.login-input:focus { border-color: #8FA456;
+  box-shadow: 0 0 0 3px rgba(107,124,63,0.12); }
+.login-btn {
+  width: 100%; padding: 15px; background: #6B7C3F;
+  color: white; border: none; border-radius: 999px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.login-btn:hover { background: #8FA456; }
+.login-error { color: #EF4444; font-size: 13px; margin-bottom: 10px; }
+
+/* ── 대시보드 ── */
+#dashboard-screen { display: none; min-height: 100vh; }
+.sidebar {
+  position: fixed; left: 0; top: 0; width: 200px;
+  height: 100vh; background: #3D4A22;
+  padding: 24px 16px; display: flex; flex-direction: column;
+}
+.sidebar-logo {
+  font-family: 'DM Serif Display', serif; color: white;
+  font-size: 22px; font-style: italic; margin-bottom: 2px;
+}
+.sidebar-label {
+  color: #D4DBA8; font-size: 9px; letter-spacing: 3px;
+  margin-bottom: 28px;
+}
+.logout-btn {
+  margin-top: auto; padding: 10px;
+  background: transparent; border: 1px solid #6B7C3F;
+  border-radius: 8px; color: #D4DBA8; cursor: pointer; font-size: 13px;
+}
+.main { margin-left: 200px; padding: 32px 28px; }
+.page-title { color: #3D4A22; font-size: 22px; font-weight: 700;
+              margin-bottom: 24px; }
+
+/* KPI 카드 */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 16px; margin-bottom: 28px; }
+.kpi-card { background: white; border-radius: 16px;
+            padding: 20px 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.kpi-label { color: #6B6B6B; font-size: 13px; margin-bottom: 8px; }
+.kpi-value { font-family: 'DM Serif Display', serif;
+             font-size: 38px; font-weight: 700; }
+
+/* 툴바 */
+.toolbar { display: flex; gap: 12px; margin-bottom: 16px;
+           align-items: center; flex-wrap: wrap; }
+.search-input {
+  padding: 10px 14px; border-radius: 10px;
+  border: 1.5px solid #D4DBA8; font-size: 14px;
+  outline: none; width: 220px;
+}
+.filter-btn {
+  padding: 8px 16px; border-radius: 999px;
+  border: 1.5px solid #D4DBA8; background: white;
+  color: #6B6B6B; cursor: pointer; font-size: 13px; font-weight: 600;
+}
+.filter-btn.active {
+  background: #6B7C3F; color: white; border-color: #6B7C3F;
+}
+.csv-btn {
+  margin-left: auto; padding: 9px 20px; border-radius: 999px;
+  background: #C8B84A; color: white; border: none;
+  cursor: pointer; font-size: 13px; font-weight: 700;
+}
+.refresh-btn {
+  padding: 9px 16px; border-radius: 999px;
+  background: #6B7C3F; color: white; border: none;
+  cursor: pointer; font-size: 13px; font-weight: 700;
+}
+
+/* 테이블 */
+.table-wrap { background: white; border-radius: 16px;
+              overflow: hidden;
+              box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+              overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 900px; }
+thead tr { background: #3D4A22; }
+th { padding: 12px 14px; color: white; font-size: 12px;
+     font-weight: 600; text-align: left; white-space: nowrap; }
+td { padding: 11px 14px; font-size: 13px;
+     border-bottom: 1px solid #F0F0F0; }
+tr:nth-child(even) td { background: #FAFAF8; }
+tr:hover td { background: #F0F4E8; }
+
+.badge {
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.badge-brand { background: #D4DBA8; color: #3D4A22; }
+.badge-inf { background: #FEF3C7; color: #92400E; }
+
+.status-select {
+  padding: 4px 8px; border-radius: 8px;
+  border: 1px solid #D4DBA8; font-size: 12px;
+  cursor: pointer; outline: none;
+}
+.del-btn {
+  padding: 4px 10px; border-radius: 6px;
+  border: 1px solid #FCA5A5; background: white;
+  color: #EF4444; font-size: 12px; cursor: pointer;
+}
+
+/* 슬라이드오버 */
+#slideOver {
+  position: fixed; right: -360px; top: 0; width: 340px;
+  height: 100vh; background: white; overflow-y: auto;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+  padding: 28px 24px; transition: right 0.3s ease; z-index: 1000;
+}
+#slideOver.open { right: 0; }
+.so-header { display: flex; justify-content: space-between;
+             align-items: center; margin-bottom: 24px; }
+.so-title { color: #3D4A22; font-size: 18px; font-weight: 700; }
+.so-close { background: none; border: none; font-size: 20px;
+            cursor: pointer; color: #6B6B6B; }
+.so-field { margin-bottom: 14px; }
+.so-label { font-size: 11px; color: #9CA3AF; margin-bottom: 2px; }
+.so-value { font-size: 14px; color: #3D4A22; font-weight: 600; }
+.so-memo { width: 100%; padding: 10px 12px; border-radius: 10px;
+           border: 1.5px solid #D4DBA8; font-size: 13px;
+           outline: none; resize: none; font-family: inherit; }
+.so-del-btn {
+  margin-top: 16px; width: 100%; padding: 12px;
+  background: white; border: 1.5px solid #FCA5A5;
+  border-radius: 12px; color: #EF4444;
+  font-size: 14px; cursor: pointer; font-weight: 600;
+}
+
+.empty-msg { padding: 48px; text-align: center;
+             color: #9CA3AF; font-size: 14px; }
+.loading-msg { padding: 48px; text-align: center;
+               color: #6B7C3F; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- ════ 로그인 화면 ════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">anting</div>
+    <div class="login-sub">어드민 페이지</div>
+    <input id="pw-input" class="login-input" type="password" placeholder="비밀번호 입력" />
+    <div id="login-error" class="login-error" style="display:none"></div>
+    <button class="login-btn" onclick="doLogin()">로그인</button>
+  </div>
+</div>
+
+<!-- ════ 대시보드 화면 ════ -->
+<div id="dashboard-screen">
+  <div class="sidebar">
+    <div class="sidebar-logo">anting</div>
+    <div class="sidebar-label">ADMIN</div>
+    <button class="logout-btn" onclick="doLogout()">로그아웃</button>
+  </div>
+  <div class="main">
+    <div class="page-title">앤팅크루 관리</div>
+
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">전체 크루</div>
+        <div class="kpi-value" id="kpi-total" style="color:#6B7C3F">-</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">광고주</div>
+        <div class="kpi-value" id="kpi-brand" style="color:#3D4A22">-</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">인플루언서</div>
+        <div class="kpi-value" id="kpi-inf" style="color:#C8B84A">-</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">오늘 가입</div>
+        <div class="kpi-value" id="kpi-today" style="color:#028090">-</div>
+      </div>
+    </div>
+
+    <!-- 툴바 -->
+    <div class="toolbar">
+      <input class="search-input" id="search-input"
+             placeholder="이름 또는 이메일 검색"
+             oninput="renderTable()" />
+      <button class="filter-btn active" id="btn-all"
+              onclick="setFilter('all')">전체</button>
+      <button class="filter-btn" id="btn-brand"
+              onclick="setFilter('brand')">광고주</button>
+      <button class="filter-btn" id="btn-influencer"
+              onclick="setFilter('influencer')">인플루언서</button>
+      <button class="refresh-btn" onclick="loadData()">새로고침</button>
+      <button class="csv-btn" onclick="exportCSV()">CSV 내보내기</button>
+    </div>
+
+    <!-- 테이블 -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>이름</th><th>유형</th><th>연락처</th>
+            <th>이메일</th><th>지역</th><th>진단유형</th>
+            <th>상태</th><th>가입일</th><th>액션</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr><td colspan="9" class="loading-msg">데이터 로딩 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- 슬라이드오버 -->
+<div id="slideOver">
+  <div class="so-header">
+    <div class="so-title" id="so-name"></div>
+    <button class="so-close" onclick="closeSlide()">✕</button>
+  </div>
+  <div id="so-content"></div>
+</div>
+
+<!-- ════ Firebase SDK ════ -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+  getFirestore, collection, getDocs, doc,
+  updateDoc, deleteDoc, orderBy, query, Timestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ── Firebase 설정 ──
+const firebaseConfig = {
+  apiKey: "AIzaSyDaUkAstAp9UmIe7JXL-nyZWC2pj9mbMds",
+  authDomain: "anting-app-0001.firebaseapp.com",
+  projectId: "anting-app-0001",
+  storageBucket: "anting-app-0001.firebasestorage.app",
+  messagingSenderId: "1056425866540",
+  appId: "1:1056425866540:web:255444cf3c30c607606889",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let allCrews = [];
+let currentFilter = 'all';
+let currentSelected = null;
+
+// ── 로그인 ──
+window.doLogin = function() {
+  const pw = document.getElementById('pw-input').value;
+  const err = document.getElementById('login-error');
+  if (pw === 'anting2025admin') {
+    sessionStorage.setItem('anting-admin', 'true');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard-screen').style.display = 'block';
+    loadData();
+  } else {
+    err.textContent = '비밀번호가 올바르지 않습니다.';
+    err.style.display = 'block';
+  }
+};
+
+document.getElementById('pw-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') window.doLogin();
+});
+
+// ── 자동 로그인 체크 ──
+if (sessionStorage.getItem('anting-admin') === 'true') {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('dashboard-screen').style.display = 'block';
+  loadData();
+}
+
+// ── 로그아웃 ──
+window.doLogout = function() {
+  sessionStorage.removeItem('anting-admin');
+  location.reload();
+};
+
+// ── 데이터 로드 ──
+window.loadData = async function() {
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '<tr><td colspan="9" class="loading-msg">로딩 중...</td></tr>';
+  try {
+    const q = query(
+      collection(db, 'crew_members'),
+      orderBy('createdAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    allCrews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    updateKPI();
+    renderTable();
+  } catch (e) {
+    console.error(e);
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-msg">데이터 로딩 실패: ${e.message}<br>Firebase Console에서 Firestore Rules를 확인해주세요.</td></tr>`;
+  }
+};
+
+// ── KPI 업데이트 ──
+function updateKPI() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  document.getElementById('kpi-total').textContent = allCrews.length;
+  document.getElementById('kpi-brand').textContent =
+    allCrews.filter(c => c.userType === 'brand').length;
+  document.getElementById('kpi-inf').textContent =
+    allCrews.filter(c => c.userType === 'influencer').length;
+  document.getElementById('kpi-today').textContent =
+    allCrews.filter(c => {
+      const d = c.createdAt?.toDate?.();
+      return d && d >= today;
+    }).length;
+}
+
+// ── 필터 ──
+window.setFilter = function(f) {
+  currentFilter = f;
+  ['all','brand','influencer'].forEach(id => {
+    const btn = document.getElementById(`btn-${id}`);
+    btn.className = 'filter-btn' + (id === f ? ' active' : '');
+  });
+  renderTable();
+};
+
+// ── 테이블 렌더링 ──
+window.renderTable = function() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const filtered = allCrews.filter(c => {
+    const matchSearch = !search ||
+      (c.name || '').toLowerCase().includes(search) ||
+      (c.email || '').toLowerCase().includes(search);
+    const matchFilter = currentFilter === 'all' ||
+      c.userType === currentFilter;
+    return matchSearch && matchFilter;
+  });
+
+  const tbody = document.getElementById('table-body');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-msg">등록된 크루가 없습니다.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(crew => {
+    const date = crew.createdAt?.toDate?.()
+      ? crew.createdAt.toDate().toLocaleDateString('ko-KR')
+      : '-';
+    const typeBadge = crew.userType === 'brand'
+      ? '<span class="badge badge-brand">광고주</span>'
+      : '<span class="badge badge-inf">인플루언서</span>';
+    const status = crew.status || '대기중';
+    return `<tr>
+      <td style="cursor:pointer;color:#3D4A22;font-weight:600"
+          onclick="openSlide('${crew.id}')">${crew.name || '-'}</td>
+      <td>${typeBadge}</td>
+      <td>${crew.phone || '-'}</td>
+      <td style="color:#6B6B6B;font-size:12px">${crew.email || '-'}</td>
+      <td>${crew.region || '-'}</td>
+      <td style="color:#6B6B6B;font-size:12px">${crew.resultType || '-'}</td>
+      <td>
+        <select class="status-select" onchange="updateStatus('${crew.id}',this.value)">
+          ${['대기중','연락완료','전환완료'].map(s =>
+            `<option value="${s}" ${status===s?'selected':''}>${s}</option>`
+          ).join('')}
+        </select>
+      </td>
+      <td style="color:#9CA3AF;font-size:11px">${date}</td>
+      <td>
+        <button class="del-btn" onclick="deleteCrew('${crew.id}')">삭제</button>
+      </td>
+    </tr>`;
+  }).join('');
+};
+
+// ── 상태 변경 ──
+window.updateStatus = async function(id, status) {
+  try {
+    await updateDoc(doc(db, 'crew_members', id), { status });
+    const idx = allCrews.findIndex(c => c.id === id);
+    if (idx !== -1) allCrews[idx].status = status;
+  } catch(e) { alert('상태 변경 실패: ' + e.message); }
+};
+
+// ── 삭제 ──
+window.deleteCrew = async function(id) {
+  if (!confirm('정말 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db, 'crew_members', id));
+    allCrews = allCrews.filter(c => c.id !== id);
+    updateKPI();
+    renderTable();
+    if (currentSelected?.id === id) closeSlide();
+  } catch(e) { alert('삭제 실패: ' + e.message); }
+};
+
+// ── 슬라이드오버 ──
+window.openSlide = function(id) {
+  const crew = allCrews.find(c => c.id === id);
+  if (!crew) return;
+  currentSelected = crew;
+  document.getElementById('so-name').textContent = crew.name || '-';
+  const genderMap = { male:'남성', female:'여성', none:'미선택' };
+  const date = crew.createdAt?.toDate?.()
+    ? crew.createdAt.toDate().toLocaleString('ko-KR') : '-';
+  document.getElementById('so-content').innerHTML = `
+    ${[
+      ['유형', crew.userType==='brand'?'광고주':'인플루언서'],
+      ['생년월일', crew.birthDate||'-'],
+      ['성별', genderMap[crew.gender]||'-'],
+      ['연락처',`<a href="tel:${crew.phone}" style="color:#6B7C3F">${crew.phone||'-'}</a>`],
+      ['이메일',`<a href="mailto:${crew.email}" style="color:#6B7C3F">${crew.email||'-'}</a>`],
+      ['거주 지역', crew.region||'-'],
+      ['진단 유형', crew.resultType||'-'],
+      ['가입 출처', crew.source||'-'],
+      ['가입 일시', date],
+    ].map(([l,v]) => `
+      <div class="so-field">
+        <div class="so-label">${l}</div>
+        <div class="so-value">${v}</div>
+      </div>
+    `).join('')}
+    <div class="so-field">
+      <div class="so-label">메모</div>
+      <textarea class="so-memo" id="memo-${crew.id}" rows="4"
+        placeholder="메모를 입력하세요"
+        onblur="saveMemo('${crew.id}',this.value)"
+      >${crew.memo||''}</textarea>
+    </div>
+    <button class="so-del-btn" onclick="deleteCrew('${crew.id}')">
+      크루 삭제
+    </button>
+  `;
+  document.getElementById('slideOver').classList.add('open');
+};
+
+window.closeSlide = function() {
+  document.getElementById('slideOver').classList.remove('open');
+  currentSelected = null;
+};
+
+// ── 메모 저장 ──
+window.saveMemo = async function(id, memo) {
+  try {
+    await updateDoc(doc(db, 'crew_members', id), { memo });
+    const idx = allCrews.findIndex(c => c.id === id);
+    if (idx !== -1) allCrews[idx].memo = memo;
+  } catch(e) { console.error('메모 저장 실패', e); }
+};
+
+// ── CSV 내보내기 ──
+window.exportCSV = function() {
+  const bom = '\uFEFF';
+  const hdr = '번호,이름,생년월일,성별,연락처,이메일,지역,유형,진단결과,상태,메모,가입일\n';
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const rows = allCrews
+    .filter(c => {
+      const matchSearch = !search ||
+        (c.name||'').toLowerCase().includes(search) ||
+        (c.email||'').toLowerCase().includes(search);
+      const matchFilter = currentFilter === 'all' ||
+        c.userType === currentFilter;
+      return matchSearch && matchFilter;
+    })
+    .map((c,i) => {
+      const genderMap = {male:'남성',female:'여성',none:'미선택'};
+      const date = c.createdAt?.toDate?.()
+        ? c.createdAt.toDate().toLocaleString('ko-KR') : '';
+      return [
+        i+1, c.name||'', c.birthDate||'',
+        genderMap[c.gender]||'',
+        c.phone||'', c.email||'', c.region||'',
+        c.userType||'', c.resultType||'',
+        c.status||'대기중', c.memo||'', date
+      ].map(v=>`"${v}"`).join(',');
+    });
+  const blob = new Blob([bom+hdr+rows.join('\n')],
+    {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `anting-crew-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+};
+</script>
+</body>
+</html>

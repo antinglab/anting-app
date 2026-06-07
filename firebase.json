@@ -1,0 +1,68 @@
+{
+  "hosting": {
+    "site": "anting-app-0001",
+    "public": "out",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "cleanUrls": true,
+    "trailingSlash": true,
+    "rewrites": [
+      {
+        "source": "/admin-panel/**",
+        "destination": "/admin-panel/index.html"
+      },
+      {
+        "source": "/quiz",
+        "destination": "/quiz/index.html"
+      },
+      {
+        "source": "/quiz/",
+        "destination": "/quiz/index.html"
+      },
+      {
+        "source": "/result",
+        "destination": "/result/index.html"
+      },
+      {
+        "source": "/result/",
+        "destination": "/result/index.html"
+      },
+      {
+        "source": "/join",
+        "destination": "/join/index.html"
+      },
+      {
+        "source": "/join/",
+        "destination": "/join/index.html"
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "functions": {
+    "source": "functions"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "hosting": {
+      "port": 5000
+    },
+    "functions": {
+      "port": 5001
+    },
+    "storage": {
+      "port": 9199
+    },
+    "ui": {
+      "enabled": true
+    }
+  }
+}
