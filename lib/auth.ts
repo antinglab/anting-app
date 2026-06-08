@@ -23,6 +23,8 @@ export interface RegisterData {
   instagramHandle?: string;
   followerCount?: number;
   region?: string;
+  // 진단 결과 연동
+  diagnosisResult?: string;
 }
 
 export const registerWithEmail = async (data: RegisterData) => {
@@ -40,6 +42,7 @@ export const registerWithEmail = async (data: RegisterData) => {
     phone: data.phone,
     role: data.role,
     profileComplete: true,
+    diagnosisResult: data.diagnosisResult || null,
     createdAt: serverTimestamp(),
   };
 

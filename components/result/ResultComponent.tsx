@@ -183,7 +183,7 @@ export default function ResultComponent() {
         </p>
         
         <Link 
-          href={`/join?type=${userType}&result=${resultData.type}`}
+          href={`/register?type=${userType}&result=${resultData.type}`}
           className="inline-flex w-full bg-olive text-white font-bold rounded-full h-14 items-center justify-center hover:bg-olive-dark transition-all duration-300 shadow-md group"
         >
           앤팅크루 가입하기 

@@ -1,20 +1,40 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { registerWithEmail, RegisterData } from '@/lib/auth';
 import Link from 'next/link';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const typeParam = searchParams.get('type');
+  const resultParam = searchParams.get('result');
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   // 폼 상태
   const [formData, setFormData] = useState<Partial<RegisterData>>({
-    role: 'influencer',
+    role: 'influencer', // 기본값
   });
+
+  // URL 파라미터를 기반으로 초기 역할 설정 및 진단 결과 저장
+  useEffect(() => {
+    if (typeParam === 'brand' || typeParam === 'influencer') {
+      setFormData((prev) => ({ 
+        ...prev, 
+        role: typeParam as 'brand' | 'influencer',
+        diagnosisResult: resultParam || undefined
+      }));
+    } else if (resultParam) {
+      setFormData((prev) => ({
+        ...prev,
+        diagnosisResult: resultParam
+      }));
+    }
+  }, [typeParam, resultParam]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -81,20 +101,26 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setFormData((prev) => ({ ...prev, role: 'influencer' }))}
-                  className={`flex-1 p-4 rounded-xl border-2 ${
-                    formData.role === 'influencer' ? 'border-olive bg-olive-pale' : 'border-gray-200'
+                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+                    formData.role === 'influencer' 
+                      ? 'border-olive bg-olive-pale shadow-md text-olive-dark font-bold' 
+                      : 'border-gray-200 text-gray-500 hover:border-olive-light'
                   }`}
                 >
                   인플루언서
+                  {typeParam === 'influencer' && <span className="block text-xs text-olive font-normal mt-1">(추천됨)</span>}
                 </button>
                 <button
                   type="button"
                   onClick={() => setFormData((prev) => ({ ...prev, role: 'brand' }))}
-                  className={`flex-1 p-4 rounded-xl border-2 ${
-                    formData.role === 'brand' ? 'border-olive bg-olive-pale' : 'border-gray-200'
+                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+                    formData.role === 'brand' 
+                      ? 'border-olive bg-olive-pale shadow-md text-olive-dark font-bold' 
+                      : 'border-gray-200 text-gray-500 hover:border-olive-light'
                   }`}
                 >
                   브랜드(광고주)
+                  {typeParam === 'brand' && <span className="block text-xs text-olive font-normal mt-1">(추천됨)</span>}
                 </button>
               </div>
             </div>
@@ -254,5 +280,13 @@ export default function RegisterPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-olive">로딩 중...</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }
