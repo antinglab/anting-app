@@ -59,6 +59,15 @@ background: #F7F6F1; color: #1A1A1A; }
   color: #D4DBA8; font-size: 9px; letter-spacing: 3px;
   margin-bottom: 28px;
 }
+.menu-items { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.menu-btn {
+  padding: 12px 16px; background: transparent; border: none;
+  color: #D4DBA8; font-size: 14px; text-align: left;
+  border-radius: 8px; cursor: pointer; transition: all 0.2s;
+}
+.menu-btn:hover { background: rgba(212,219,168,0.1); }
+.menu-btn.active { background: #6B7C3F; color: white; font-weight: 700; }
+
 .logout-btn {
   margin-top: auto; padding: 10px;
   background: transparent; border: 1px solid #6B7C3F;
@@ -136,6 +145,14 @@ tr:hover td { background: #F0F4E8; }
   border: 1px solid #FCA5A5; background: white;
   color: #EF4444; font-size: 12px; cursor: pointer;
 }
+.btn-approve {
+  padding: 6px 12px; border-radius: 6px; background: #6B7C3F;
+  color: white; border: none; cursor: pointer; font-size: 12px; font-weight: 700;
+}
+.btn-reject {
+  padding: 6px 12px; border-radius: 6px; background: white; border: 1px solid #FCA5A5;
+  color: #EF4444; cursor: pointer; font-size: 12px; font-weight: 700; margin-left: 4px;
+}
 
 /* 슬라이드오버 */
 #slideOver {
@@ -187,10 +204,17 @@ tr:hover td { background: #F0F4E8; }
   <div class="sidebar">
     <div class="sidebar-logo">anting</div>
     <div class="sidebar-label">ADMIN</div>
+    <div class="menu-items">
+      <button class="menu-btn active" id="tab-crew" onclick="switchTab('crew')">앤팅크루 관리</button>
+      <button class="menu-btn" id="tab-withdraw" onclick="switchTab('withdraw')">출금 관리</button>
+    </div>
     <button class="logout-btn" onclick="doLogout()">로그아웃</button>
   </div>
   <div class="main">
-    <div class="page-title">앤팅크루 관리</div>
+    
+    <!-- 앤팅크루 관리 뷰 -->
+    <div id="view-crew">
+      <div class="page-title">앤팅크루 관리</div>
 
     <!-- KPI -->
     <div class="kpi-grid">
@@ -242,6 +266,29 @@ tr:hover td { background: #F0F4E8; }
         </tbody>
       </table>
     </div>
+    </div> <!-- end view-crew -->
+
+    <!-- 출금 관리 뷰 -->
+    <div id="view-withdraw" style="display:none;">
+      <div class="page-title">출금 관리</div>
+      <div class="toolbar">
+        <button class="refresh-btn" onclick="loadWithdrawData()">새로고침</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>신청일시</th><th>사용자 UID</th><th>금액</th>
+              <th>은행</th><th>계좌번호</th><th>예금주</th>
+              <th>상태</th><th>액션</th>
+            </tr>
+          </thead>
+          <tbody id="withdraw-table-body">
+            <tr><td colspan="8" class="loading-msg">데이터 로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -260,7 +307,8 @@ tr:hover td { background: #F0F4E8; }
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
   getFirestore, collection, getDocs, doc,
-  updateDoc, deleteDoc, orderBy, query, Timestamp
+  updateDoc, deleteDoc, orderBy, query, Timestamp,
+  runTransaction, serverTimestamp, setDoc, getDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── Firebase 설정 ──
@@ -277,8 +325,20 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let allCrews = [];
+let allWithdraws = [];
 let currentFilter = 'all';
 let currentSelected = null;
+
+// ── 탭 전환 ──
+window.switchTab = function(tab) {
+  document.getElementById('view-crew').style.display = tab === 'crew' ? 'block' : 'none';
+  document.getElementById('view-withdraw').style.display = tab === 'withdraw' ? 'block' : 'none';
+  document.getElementById('tab-crew').className = 'menu-btn' + (tab === 'crew' ? ' active' : '');
+  document.getElementById('tab-withdraw').className = 'menu-btn' + (tab === 'withdraw' ? ' active' : '');
+  if (tab === 'withdraw') {
+    loadWithdrawData();
+  }
+};
 
 // ── 로그인 ──
 window.doLogin = function() {
@@ -514,6 +574,114 @@ window.exportCSV = function() {
   a.href = url;
   a.download = `anting-crew-${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
+};
+
+// ── 출금 관리 데이터 로드 ──
+window.loadWithdrawData = async function() {
+  const tbody = document.getElementById('withdraw-table-body');
+  tbody.innerHTML = '<tr><td colspan="8" class="loading-msg">로딩 중...</td></tr>';
+  try {
+    const q = query(
+      collection(db, 'withdraw_requests'),
+      orderBy('createdAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    allWithdraws = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderWithdrawTable();
+  } catch (e) {
+    console.error(e);
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-msg">데이터 로딩 실패: ${e.message}</td></tr>`;
+  }
+};
+
+window.renderWithdrawTable = function() {
+  const tbody = document.getElementById('withdraw-table-body');
+  if (allWithdraws.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">출금 요청이 없습니다.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = allWithdraws.map(w => {
+    const date = w.createdAt?.toDate?.() ? w.createdAt.toDate().toLocaleString('ko-KR') : '-';
+    let actionHtml = '-';
+    if (w.status === 'pending') {
+      actionHtml = `
+        <button class="btn-approve" onclick="approveWithdraw('${w.id}', '${w.uid}', ${w.amount})">승인</button>
+        <button class="btn-reject" onclick="rejectWithdraw('${w.id}')">거절</button>
+      `;
+    }
+    
+    let statusBadge = w.status === 'pending' ? '<span class="badge badge-inf" style="background:#FEF3C7;color:#92400E;">대기중</span>' 
+      : w.status === 'completed' ? '<span class="badge badge-brand" style="background:#D4DBA8;color:#3D4A22;">승인됨</span>' 
+      : '<span class="badge" style="background:#FEE2E2;color:#991B1B;">거절됨</span>';
+
+    return `<tr>
+      <td style="color:#6B6B6B;font-size:12px">${date}</td>
+      <td style="color:#6B6B6B;font-size:12px">${w.uid}</td>
+      <td style="font-weight:700;color:#3D4A22;">${w.amount.toLocaleString()}P</td>
+      <td>${w.bankName}</td>
+      <td>${w.accountNumber}</td>
+      <td>${w.accountHolder}</td>
+      <td>${statusBadge}</td>
+      <td>${actionHtml}</td>
+    </tr>`;
+  }).join('');
+};
+
+window.approveWithdraw = async function(id, uid, amount) {
+  if (!confirm('출금을 승인하고 포인트를 차감하시겠습니까?')) return;
+  try {
+    const reqRef = doc(db, 'withdraw_requests', id);
+    const pointsRef = doc(db, 'points', uid);
+
+    await runTransaction(db, async (transaction) => {
+      const pointsDoc = await transaction.get(pointsRef);
+      let currentBalance = 0;
+      if (pointsDoc.exists()) {
+        currentBalance = pointsDoc.data().balance || 0;
+      }
+
+      if (currentBalance < amount) {
+        throw new Error('유저의 포인트가 부족합니다.');
+      }
+
+      const newBalance = currentBalance - amount;
+      
+      // Update balance
+      transaction.set(pointsRef, { balance: newBalance }, { merge: true });
+      
+      // Add history
+      const historyRef = doc(collection(pointsRef, "history"));
+      transaction.set(historyRef, {
+        id: historyRef.id,
+        uid: uid,
+        type: 'withdraw',
+        amount: amount,
+        balance: newBalance,
+        description: '출금 완료',
+        createdAt: serverTimestamp()
+      });
+
+      // Update request status
+      transaction.update(reqRef, { status: 'completed' });
+    });
+
+    alert('승인 및 포인트 차감이 완료되었습니다.');
+    loadWithdrawData();
+  } catch(e) {
+    alert('승인 실패: ' + e.message);
+  }
+};
+
+window.rejectWithdraw = async function(id) {
+  if (!confirm('출금을 거절하시겠습니까?')) return;
+  try {
+    await updateDoc(doc(db, 'withdraw_requests', id), { status: 'rejected' });
+    alert('거절 처리되었습니다.');
+    loadWithdrawData();
+  } catch(e) {
+    alert('거절 실패: ' + e.message);
+  }
 };
 </script>
 </body>

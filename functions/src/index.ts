@@ -40,3 +40,6 @@ export const setAdminRole = onCall(async (request) => {
 // Export notifications
 export * from "./notifications/telegram";
 export * from "./notifications/scheduler";
+
+// Export points logic
+export * from "./points";

@@ -1,16 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
-import { Card } from '@/components/ui/card'; // fallback if they have it, else regular div
 
 interface NotificationItem {
   id: string;
   title: string;
   body: string;
-  createdAt: any;
+  createdAt: Timestamp;
   read: boolean;
 }
 

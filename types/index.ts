@@ -30,6 +30,7 @@ export interface Campaign {
   requiredHashtags: string[];
   status: CampaignStatus;
   deadline: Timestamp;
+  pointReward?: number;
   createdAt: Timestamp;
 }
 
@@ -178,4 +179,26 @@ export interface Influencer extends AppUser {
   tier: 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
   referralCode?: string;
   totalEarnings: number;
+}
+
+export interface PointHistory {
+  id: string;
+  uid: string;
+  type: 'earn' | 'withdraw' | 'deduct' | 'payback';
+  amount: number;
+  balance: number;
+  description: string;
+  campaignId?: string;
+  createdAt: Timestamp;
+}
+
+export interface WithdrawRequest {
+  id: string;
+  uid: string;
+  amount: number;
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  status: 'pending' | 'completed' | 'rejected';
+  createdAt: Timestamp;
 }
