@@ -43,3 +43,6 @@ export * from "./notifications/scheduler";
 
 // Export points logic
 export * from "./points";
+
+// Export campaigns logic
+export * from "./campaigns";
