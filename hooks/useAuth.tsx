@@ -18,12 +18,16 @@ const AuthContext = createContext<AuthState>({
   loading: true,
 });
 
+import { useFCM } from './useFCM';
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<AuthState>({
     user: null,
     role: null,
     loading: true,
   });
+
+  useFCM(state.user?.uid || null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {

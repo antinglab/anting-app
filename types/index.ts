@@ -3,30 +3,55 @@ import { Timestamp } from "firebase/firestore";
 /**
  * Campaign Status Badge types
  */
-export type CampaignStatus = 'recruiting' | 'selected' | 'delivering' | 'reviewing' | 'completed';
+export type CampaignStatus = 'draft' | 'recruiting' | 'selection_pending' | 'delivering' | 'reviewing' | 'completed' | 'cancelled';
 
 /**
  * Campaign Entity Schema
  */
 export interface Campaign {
   id: string;
-  title: string;
-  description: string;
   brandId: string;
-  brandName: string;
-  status: CampaignStatus;
+  title: string;
+  productName: string;
   category: string;
-  recruitsCount: number;
-  selectedCount: number;
-  recruitingPeriod: {
-    start: Timestamp;
-    end: Timestamp;
+  productImages: string[];
+  description: string;
+  benefit: string;
+  recruitCount: number;
+  currentApplicants: number;
+  conditions: {
+    minFollowers: number;
+    regions: string[];
+    genders: string[];
   };
-  productImageUrls: string[];
-  productInfo: string;
-  rewardInfo: string;
+  guidelines: string;
+  requiredPhrases: string[];
+  forbiddenWords: string[];
+  requiredHashtags: string[];
+  status: CampaignStatus;
+  deadline: Timestamp;
   createdAt: Timestamp;
-  updatedAt: Timestamp;
+}
+
+/**
+ * Application Entity Schema
+ */
+export type ApplicationStatus = 'pending' | 'selected' | 'rejected' | 'delivered' | 'submitted' | 'approved' | 'revision_requested';
+
+export interface Application {
+  id: string;
+  campaignId: string;
+  influencerId: string;
+  brandId: string;
+  status: ApplicationStatus;
+  trackingNumber?: string;
+  carrier?: string;
+  contentUrl?: string;
+  contentPlatform?: 'instagram' | 'blog' | 'tiktok';
+  revisionReason?: string;
+  submittedAt?: Timestamp;
+  approvedAt?: Timestamp;
+  createdAt: Timestamp;
 }
 
 /**

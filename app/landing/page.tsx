@@ -49,10 +49,10 @@ export default function LandingPage() {
               자가진단
             </Link>
             <Link 
-              href="/quiz?type=brand" 
+              href="/login" 
               className="bg-accent text-olive-dark text-xs font-bold px-5 py-2.5 rounded-full hover:bg-white hover:text-olive transition-all duration-300 shadow-sm"
             >
-              시작하기
+              로그인
             </Link>
           </div>
         </div>

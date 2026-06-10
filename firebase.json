@@ -33,6 +33,22 @@
       {
         "source": "/join/",
         "destination": "/join/index.html"
+      },
+      {
+        "source": "/brand/campaigns/*/applicants",
+        "destination": "/brand/campaigns/index/applicants/index.html"
+      },
+      {
+        "source": "/brand/campaigns/*/contents",
+        "destination": "/brand/campaigns/index/contents/index.html"
+      },
+      {
+        "source": "/influencer/campaigns/*",
+        "destination": "/influencer/campaigns/index/index.html"
+      },
+      {
+        "source": "/influencer/my-campaigns/*",
+        "destination": "/influencer/my-campaigns/index/index.html"
       }
     ]
   },
