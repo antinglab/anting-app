@@ -1,15 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { Sparkles, Loader2, CheckSquare } from 'lucide-react';
 import { doc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { getApp } from 'firebase/app';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { Campaign, Application } from '@/types';
 
 const STEPS = ['신청', '선발', '수령', '작성', '제출', '승인', '정산'];
 
+interface ParsedGuide {
+  required_phrases: string[];
+  forbidden_words: string[];
+  required_hashtags: string[];
+  must_include: string[];
+  must_not_include: string[];
+  ad_disclosure: string;
+}
+
 export default function InfluencerCampaignStatusPage() {
   const params = useParams();
+  const router = useRouter();
   const campaignId = params.id as string;
   const MOCK_INFLUENCER_ID = 'mock-influencer-id';
 
@@ -20,6 +33,11 @@ export default function InfluencerCampaignStatusPage() {
   // Form State
   const [contentUrl, setContentUrl] = useState('');
   const [platform, setPlatform] = useState<'instagram' | 'blog' | 'tiktok'>('instagram');
+
+  // Guide Parsing State
+  const [parsedGuide, setParsedGuide] = useState<ParsedGuide | null>(null);
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [isParsing, setIsParsing] = useState(false);
 
   useEffect(() => {
     if (campaignId) {
@@ -64,6 +82,46 @@ export default function InfluencerCampaignStatusPage() {
       default: return 0;
     }
   };
+
+  const handleParseGuide = async () => {
+    if (!campaign?.guidelines) return;
+    try {
+      setIsParsing(true);
+      const app = getApp();
+      const functions = getFunctions(app, "us-central1");
+      const parseGuidelines = httpsCallable(functions, "parseGuidelines");
+      const res = await parseGuidelines({ guidelineText: campaign.guidelines });
+      const data = res.data as { success: boolean; data: ParsedGuide };
+      if (data.success && data.data) {
+        setParsedGuide(data.data);
+        setCheckedItems(new Set());
+      }
+    } catch (error) {
+      console.error(error);
+      alert("가이드 분석 중 오류가 발생했습니다.");
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  const toggleCheck = (id: string) => {
+    const newChecked = new Set(checkedItems);
+    if (newChecked.has(id)) newChecked.delete(id);
+    else newChecked.add(id);
+    setCheckedItems(newChecked);
+  };
+
+  const getTotalCheckItems = () => {
+    if (!parsedGuide) return 0;
+    return (parsedGuide.required_phrases?.length || 0) +
+           (parsedGuide.forbidden_words?.length || 0) +
+           (parsedGuide.required_hashtags?.length || 0) +
+           (parsedGuide.must_include?.length || 0) +
+           (parsedGuide.must_not_include?.length || 0) +
+           (parsedGuide.ad_disclosure ? 1 : 0);
+  };
+  
+  const isAllChecked = parsedGuide ? checkedItems.size === getTotalCheckItems() : false;
 
   const handleSubmitContent = async () => {
     if (!application) return;
@@ -127,28 +185,126 @@ export default function InfluencerCampaignStatusPage() {
       <div className="grid md:grid-cols-2 gap-8">
         {/* Guide Checklist */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-olive-dark mb-4">콘텐츠 작성 가이드라인</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold text-olive-dark">콘텐츠 작성 가이드라인</h2>
+            <button 
+              onClick={handleParseGuide}
+              disabled={isParsing || !campaign.guidelines}
+              className="text-xs bg-olive-pale text-olive-dark px-3 py-1.5 rounded-full font-bold hover:bg-olive hover:text-white transition-colors flex items-center gap-1 disabled:opacity-50"
+            >
+              {isParsing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+              가이드 요약 보기
+            </button>
+          </div>
+          
           <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap bg-neutral p-4 rounded-xl">{campaign.guidelines}</p>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold text-sm mb-2 text-olive">필수 해시태그</h3>
-              <div className="flex flex-wrap gap-2">
-                {campaign.requiredHashtags?.map(tag => (
-                  <span key={tag} className="bg-gray-100 px-2 py-1 rounded-md text-xs font-medium text-gray-700">{tag}</span>
-                ))}
-              </div>
-            </div>
+            {!parsedGuide && (
+              <>
+                <div>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap bg-neutral p-4 rounded-xl">{campaign.guidelines}</p>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold text-sm mb-2 text-olive">필수 해시태그</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {campaign.requiredHashtags?.map(tag => (
+                      <span key={tag} className="bg-gray-100 px-2 py-1 rounded-md text-xs font-medium text-gray-700">{tag}</span>
+                    ))}
+                  </div>
+                </div>
 
-            {campaign.forbiddenWords && campaign.forbiddenWords.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-sm mb-2 text-red-500">금지어 (절대 사용 금지)</h3>
-                <div className="flex flex-wrap gap-2">
-                  {campaign.forbiddenWords.map(word => (
-                    <span key={word} className="bg-red-50 px-2 py-1 rounded-md text-xs font-medium text-red-600">{word}</span>
-                  ))}
+                {campaign.forbiddenWords && campaign.forbiddenWords.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-sm mb-2 text-red-500">금지어 (절대 사용 금지)</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {campaign.forbiddenWords.map(word => (
+                        <span key={word} className="bg-red-50 px-2 py-1 rounded-md text-xs font-medium text-red-600">{word}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {parsedGuide && (
+              <div className="bg-neutral p-4 rounded-xl space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckSquare className="w-5 h-5 text-olive" />
+                  <h3 className="font-bold text-olive-dark">가이드 필수 체크리스트</h3>
+                </div>
+                
+                {parsedGuide.must_include && parsedGuide.must_include.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-500 mb-2">꼭 포함해야 할 내용</h4>
+                    {parsedGuide.must_include.map((item, i) => (
+                      <label key={`must_${i}`} className="flex items-start gap-2 mb-2 cursor-pointer">
+                        <input type="checkbox" checked={checkedItems.has(`must_${i}`)} onChange={() => toggleCheck(`must_${i}`)} className="mt-1 accent-olive" />
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {parsedGuide.must_not_include && parsedGuide.must_not_include.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-500 mb-2">주의/금지 사항</h4>
+                    {parsedGuide.must_not_include.map((item, i) => (
+                      <label key={`mustnot_${i}`} className="flex items-start gap-2 mb-2 cursor-pointer">
+                        <input type="checkbox" checked={checkedItems.has(`mustnot_${i}`)} onChange={() => toggleCheck(`mustnot_${i}`)} className="mt-1 accent-red-500" />
+                        <span className="text-sm text-red-600 font-medium">{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {parsedGuide.required_phrases && parsedGuide.required_phrases.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-500 mb-2">필수 포함 문구</h4>
+                    {parsedGuide.required_phrases.map((item, i) => (
+                      <label key={`phrase_${i}`} className="flex items-start gap-2 mb-2 cursor-pointer">
+                        <input type="checkbox" checked={checkedItems.has(`phrase_${i}`)} onChange={() => toggleCheck(`phrase_${i}`)} className="mt-1 accent-olive" />
+                        <span className="text-sm text-gray-700">&quot;{item}&quot;</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {parsedGuide.forbidden_words && parsedGuide.forbidden_words.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-500 mb-2">사용 금지 단어</h4>
+                    {parsedGuide.forbidden_words.map((item, i) => (
+                      <label key={`forbid_${i}`} className="flex items-start gap-2 mb-2 cursor-pointer">
+                        <input type="checkbox" checked={checkedItems.has(`forbid_${i}`)} onChange={() => toggleCheck(`forbid_${i}`)} className="mt-1 accent-red-500" />
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {parsedGuide.required_hashtags && parsedGuide.required_hashtags.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-500 mb-2">필수 해시태그</h4>
+                    {parsedGuide.required_hashtags.map((item, i) => (
+                      <label key={`tag_${i}`} className="flex items-start gap-2 mb-2 cursor-pointer">
+                        <input type="checkbox" checked={checkedItems.has(`tag_${i}`)} onChange={() => toggleCheck(`tag_${i}`)} className="mt-1 accent-olive" />
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {parsedGuide.ad_disclosure && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-500 mb-2">공정위 문구 (협찬 명시)</h4>
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input type="checkbox" checked={checkedItems.has('ad_disclosure')} onChange={() => toggleCheck('ad_disclosure')} className="mt-1 accent-olive" />
+                      <span className="text-sm text-gray-700 font-bold">{parsedGuide.ad_disclosure}</span>
+                    </label>
+                  </div>
+                )}
+                
+                <div className="mt-4 pt-4 border-t border-gray-200 text-right">
+                  <span className="text-xs font-bold text-olive-dark">체크 진행률: {checkedItems.size} / {getTotalCheckItems()}</span>
                 </div>
               </div>
             )}
@@ -195,6 +351,14 @@ export default function InfluencerCampaignStatusPage() {
                   </div>
                 )}
                 
+                <button
+                  onClick={() => router.push(`/my-campaigns/${campaignId}/create-post`)}
+                  className="w-full bg-olive-pale text-olive-dark border border-olive hover:bg-olive hover:text-white font-bold py-3 rounded-xl mb-4 transition-colors flex justify-center items-center"
+                >
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  AI 포스팅 초안 생성기 열기 ✨
+                </button>
+                
                 <div>
                   <label className="block text-sm font-medium mb-1">플랫폼</label>
                   <select 
@@ -219,9 +383,12 @@ export default function InfluencerCampaignStatusPage() {
                 </div>
                 <button 
                   onClick={handleSubmitContent}
-                  className="w-full bg-olive text-white font-bold py-3 rounded-xl mt-4 hover:bg-olive-dark transition-colors"
+                  disabled={parsedGuide ? !isAllChecked : false}
+                  className="w-full bg-olive text-white font-bold py-3 rounded-xl mt-4 hover:bg-olive-dark transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
-                  {application.status === 'revision_requested' ? '수정된 콘텐츠 제출' : '콘텐츠 제출하기'}
+                  {parsedGuide && !isAllChecked 
+                    ? '가이드 체크리스트를 모두 확인해주세요' 
+                    : (application.status === 'revision_requested' ? '수정된 콘텐츠 제출' : '콘텐츠 제출하기')}
                 </button>
               </div>
             )}
@@ -248,5 +415,3 @@ export default function InfluencerCampaignStatusPage() {
     </div>
   );
 }
-
-

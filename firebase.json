@@ -35,20 +35,24 @@
         "destination": "/join/index.html"
       },
       {
-        "source": "/brand/campaigns/*/applicants",
-        "destination": "/brand/campaigns/index/applicants/index.html"
+        "source": "/campaigns/*/applicants",
+        "destination": "/campaigns/index/applicants/index.html"
       },
       {
-        "source": "/brand/campaigns/*/contents",
-        "destination": "/brand/campaigns/index/contents/index.html"
+        "source": "/campaigns/*/contents",
+        "destination": "/campaigns/index/contents/index.html"
       },
       {
-        "source": "/influencer/campaigns/*",
-        "destination": "/influencer/campaigns/index/index.html"
+        "source": "/campaigns/*",
+        "destination": "/campaigns/index/index.html"
       },
       {
-        "source": "/influencer/my-campaigns/*",
-        "destination": "/influencer/my-campaigns/index/index.html"
+        "source": "/my-campaigns/*/create-post",
+        "destination": "/my-campaigns/index/create-post/index.html"
+      },
+      {
+        "source": "/my-campaigns/*",
+        "destination": "/my-campaigns/index/index.html"
       }
     ]
   },

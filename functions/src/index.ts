@@ -46,3 +46,9 @@ export * from "./points";
 
 // Export campaigns logic
 export * from "./campaigns";
+
+// Export AI logic
+export * from "./ai/generatePost";
+export * from "./ai/image";
+export * from "./ai/video";
+export * from "./ai/guide";
