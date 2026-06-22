@@ -156,6 +156,9 @@ export interface AppUser {
   role: UserRole;
   profileComplete: boolean;
   createdAt: Timestamp;
+  referralCode?: string;
+  referredBy?: string;
+  paybackBalance?: number;
 }
 
 export interface Brand extends AppUser {
@@ -200,5 +203,32 @@ export interface WithdrawRequest {
   accountNumber: string;
   accountHolder: string;
   status: 'pending' | 'completed' | 'rejected';
+  createdAt: Timestamp;
+}
+
+export interface ReferralCode {
+  code: string;
+  influencerId: string;
+  totalEarnings: number;
+  totalOrders: number;
+  referredUsers: number;
+  createdAt: Timestamp;
+}
+
+export interface Order {
+  id: string;
+  userId: string;
+  sellerId: string;
+  totalAmount: number;
+  status: 'pending' | 'paid' | 'completed';
+  createdAt: Timestamp;
+}
+
+export interface ReferralEarnings {
+  id: string;
+  orderId: string;
+  influencerId: string;
+  amount: number;
+  buyerId: string;
   createdAt: Timestamp;
 }

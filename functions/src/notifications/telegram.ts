@@ -1,7 +1,7 @@
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { getFirestore } from "firebase-admin/firestore";
 
-const db = getFirestore();
+
 
 import { sendTelegramMessage } from "../utils/telegram";
 
@@ -14,6 +14,7 @@ export const onApplicationUpdated = onDocumentUpdated("applications/{application
   const campaignId = after.campaignId;
   const influencerId = after.influencerId;
 
+  const db = getFirestore();
   // Fetch related data
   const [campaignDoc, userDoc] = await Promise.all([
     db.collection("campaigns").doc(campaignId).get(),

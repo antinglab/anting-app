@@ -52,3 +52,6 @@ export * from "./ai/generatePost";
 export * from "./ai/image";
 export * from "./ai/video";
 export * from "./ai/guide";
+
+// Export referrals logic
+export * from "./referrals";

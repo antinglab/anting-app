@@ -1,13 +1,85 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronRight, Clock, Star, MapPin } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronRight, Clock, Star, MapPin, Copy } from "lucide-react";
+import { getAuth } from "firebase/auth";
+import { doc, updateDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function InfluencerDashboard() {
-  const [earnings] = useState({
-    balance: 125000,
-    monthly: 45000,
+  const [earnings, setEarnings] = useState({
+    balance: 0,
+    monthly: 0,
   });
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [loadingCode, setLoadingCode] = useState(false);
+  const [userUid, setUserUid] = useState<string | null>(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setUserUid(user.uid);
+        const userRef = doc(db, "users", user.uid);
+        onSnapshot(userRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.referralCode) {
+              setReferralCode(data.referralCode);
+            }
+            if (data.paybackBalance !== undefined) {
+              setEarnings(prev => ({ ...prev, balance: data.paybackBalance }));
+            }
+          }
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleGenerateCode = async () => {
+    if (!userUid) return;
+    setLoadingCode(true);
+    try {
+      // Extract initials or default to AT
+      const auth = getAuth();
+      const name = auth.currentUser?.displayName || auth.currentUser?.email || "AT";
+      let initials = (name.match(/[a-zA-Z]/g)?.join('').substring(0, 2) || "AT").toUpperCase();
+      if (initials.length < 2) initials = "AT";
+
+      // Create a random code
+      const randomNums = Math.floor(1000 + Math.random() * 9000).toString();
+      const code = `AT-${initials}-${randomNums}`;
+
+      // In production, you would check for uniqueness, but for simplicity here:
+      await setDoc(doc(db, "referral_codes", code), {
+        code,
+        influencerId: userUid,
+        totalEarnings: 0,
+        totalOrders: 0,
+        referredUsers: 0,
+        createdAt: new Date()
+      });
+
+      await updateDoc(doc(db, "users", userUid), {
+        referralCode: code
+      });
+      
+      alert("추천인 코드가 성공적으로 발급되었습니다!");
+    } catch (error) {
+      console.error("코드 발급 오류:", error);
+      alert("코드 발급 중 오류가 발생했습니다.");
+    } finally {
+      setLoadingCode(false);
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (referralCode) {
+      navigator.clipboard.writeText(referralCode);
+      alert("추천인 코드가 클립보드에 복사되었습니다.");
+    }
+  };
 
   const steps = [
     { label: "신청", active: true, completed: true },
@@ -50,6 +122,40 @@ export default function InfluencerDashboard() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Referral Code Section */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-olive-pale">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-olive-dark">내 판매자(추천인) 코드</h2>
+        </div>
+        
+        {referralCode ? (
+          <div className="bg-neutral p-4 rounded-xl flex items-center justify-between">
+            <div>
+              <p className="text-xs text-olive-gray mb-1">고유 코드</p>
+              <p className="text-2xl font-bold text-olive-dark font-serifDisplay tracking-wider">{referralCode}</p>
+            </div>
+            <button 
+              onClick={handleCopyCode}
+              className="flex items-center gap-2 bg-olive text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-olive-light transition-colors"
+            >
+              <Copy size={16} />
+              복사
+            </button>
+          </div>
+        ) : (
+          <div className="bg-neutral p-6 rounded-xl text-center space-y-4">
+            <p className="text-sm text-olive-gray">아직 발급된 코드가 없습니다. 판매자 코드를 발급받고 수익을 창출해보세요!</p>
+            <button 
+              onClick={handleGenerateCode}
+              disabled={loadingCode}
+              className="bg-accent text-olive-dark px-6 py-2.5 rounded-full font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {loadingCode ? "발급 중..." : "판매자 코드 발급받기"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* My Campaign Status */}

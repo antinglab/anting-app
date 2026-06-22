@@ -3,7 +3,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { sendTelegramMessage } from "./utils/telegram";
 
-const db = getFirestore();
+
 
 export const onApplicationApproved = onDocumentUpdated("applications/{applicationId}", async (event) => {
   const before = event.data?.before.data();
@@ -15,6 +15,7 @@ export const onApplicationApproved = onDocumentUpdated("applications/{applicatio
     const campaignId = after.campaignId;
     const influencerId = after.influencerId;
 
+    const db = getFirestore();
     const campaignDoc = await db.collection("campaigns").doc(campaignId).get();
     if (!campaignDoc.exists) return;
 
@@ -86,6 +87,7 @@ export const onWithdrawRequestCreated = onDocumentCreated("withdraw_requests/{re
 
   const { uid, amount, bankName, accountHolder } = data;
   
+  const db = getFirestore();
   const userDoc = await db.collection("users").doc(uid).get();
   const userName = userDoc.exists ? userDoc.data()?.name || userDoc.data()?.nickname || "인플루언서" : "인플루언서";
 

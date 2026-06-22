@@ -3,7 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { sendTelegramMessage } from "../utils/telegram";
 import { sendEmailJSNudge } from "../utils/emailjs";
 
-const db = getFirestore();
+
 
 // 1. 마감 D-3 (매일 오전 9시)
 export const deadlineReminder = onSchedule("0 9 * * *", async (event) => {
@@ -18,6 +18,7 @@ export const deadlineReminder = onSchedule("0 9 * * *", async (event) => {
   const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
   const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
 
+  const db = getFirestore();
   const campaignsSnapshot = await db.collection("campaigns")
     .where("deadline", ">=", startOfDay)
     .where("deadline", "<=", endOfDay)
@@ -47,6 +48,7 @@ export const newApplicantsBatch = onSchedule("0 */6 * * *", async (event) => {
   const now = new Date();
   const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
 
+  const db = getFirestore();
   // Find all applications created in the last 6 hours
   const applicationsSnapshot = await db.collection("applications")
     .where("createdAt", ">=", sixHoursAgo)
@@ -71,9 +73,13 @@ export const newApplicantsBatch = onSchedule("0 */6 * * *", async (event) => {
 });
 
 // 3. 자정 캠페인 자동 마감 (매일 자정)
-export const autoCampaignClose = onSchedule("0 0 * * *", async (event) => {
+export const autoCloseCampaigns = onSchedule({
+  schedule: "0 0 * * *",
+  memory: "512MiB"
+}, async (event) => {
   const now = new Date();
   
+  const db = getFirestore();
   const campaignsSnapshot = await db.collection("campaigns")
     .where("status", "==", "recruiting")
     .where("deadline", "<=", now)
@@ -93,6 +99,7 @@ export const autoCampaignClose = onSchedule("0 0 * * *", async (event) => {
 export const onboardingNudge = onSchedule("0 */2 * * *", async (event) => {
   const now = new Date();
 
+  const db = getFirestore();
   // 1) 브랜드 넛지: 가입 48h 초과 + 캠페인 없음
   const brandTargetDate = new Date(now.getTime() - 48 * 60 * 60 * 1000);
   const brandsSnap = await db.collection("users")
