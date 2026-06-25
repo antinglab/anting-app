@@ -46,6 +46,7 @@ export * from "./points";
 
 // Export campaigns logic
 export * from "./campaigns";
+export * from "./commerce";
 
 // Export AI logic
 export * from "./ai/generatePost";
@@ -55,6 +56,7 @@ export * from "./ai/guide";
 export * from "./ai/match";
 export * from "./ai/brief";
 export * from "./ai/csBot";
+export * from "./ai/sentiment";
 
 // Export referrals logic
 export * from "./referrals";

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, Timestamp, collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import app from '@/lib/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -18,9 +18,19 @@ export default function CreatePostPage() {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'instagram' | 'blog'>('instagram');
+  const [activeTab, setActiveTab] = useState<'instagram' | 'blog' | 'product-tag'>('instagram');
   const [charCount, setCharCount] = useState(0);
   const [hasAdTag, setHasAdTag] = useState(false);
+  
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [myCode] = useState<string>('INF1234');
+  const [referralLink, setReferralLink] = useState<string>('');
+  const [taggingStatus, setTaggingStatus] = useState<'idle'|'saving'|'success'|'error'>('idle');
+
+  const mockProducts = [
+    { id: 'prod-1', name: '올리브 프리미엄 비건 세럼', price: 32000, imageUrl: 'https://via.placeholder.com/150?text=Serum' },
+    { id: 'prod-2', name: '올리브 모이스처라이징 크림', price: 28000, imageUrl: 'https://via.placeholder.com/150?text=Cream' }
+  ];
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -116,6 +126,31 @@ export default function CreatePostPage() {
     alert('복사되었습니다.');
   };
 
+  const handleTagProduct = async () => {
+    if (!selectedProductId) return;
+    setTaggingStatus('saving');
+    try {
+      const link = `/shop/products/${selectedProductId}?ref=${myCode}`;
+      setReferralLink(link);
+      
+      const tagRef = collection(db, 'tagged_posts');
+      await addDoc(tagRef, {
+        influencerId: 'test-inf-id', // Mock
+        campaignId,
+        productId: selectedProductId,
+        content: editor?.getText() || '',
+        contentPlatform: activeTab === 'instagram' || activeTab === 'blog' ? activeTab : 'instagram',
+        referralLink: link,
+        createdAt: Timestamp.now()
+      });
+      setTaggingStatus('success');
+    } catch (err) {
+      console.error(err);
+      setTaggingStatus('error');
+      alert('상품 태깅 저장 중 오류가 발생했습니다.');
+    }
+  };
+
   if (loading) return <div className="text-center py-20">로딩 중...</div>;
   if (!campaign) return <div className="text-center py-20">캠페인을 찾을 수 없습니다.</div>;
 
@@ -199,49 +234,119 @@ export default function CreatePostPage() {
             >
               네이버 블로그
             </button>
+            <button
+              onClick={() => setActiveTab('product-tag')}
+              className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${
+                activeTab === 'product-tag' ? 'bg-olive text-white' : 'bg-gray-100 text-gray-500'
+              }`}
+            >
+              상품 태깅
+            </button>
           </div>
 
-          {!hasAdTag && (
-            <div className="mb-4 bg-orange-50 border border-orange-200 text-orange-700 p-3 rounded-xl flex items-center justify-between text-sm">
-              <div className="flex items-center">
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                <span>필수 해시태그(#광고, #협찬)가 포함되어 있지 않습니다!</span>
+          {activeTab !== 'product-tag' ? (
+            <>
+              {!hasAdTag && (
+                <div className="mb-4 bg-orange-50 border border-orange-200 text-orange-700 p-3 rounded-xl flex items-center justify-between text-sm">
+                  <div className="flex items-center">
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    <span>필수 해시태그(#광고, #협찬)가 포함되어 있지 않습니다!</span>
+                  </div>
+                  <button 
+                    onClick={insertAdTag}
+                    className="text-xs font-bold bg-orange-100 px-2 py-1 rounded hover:bg-orange-200"
+                  >
+                    자동 삽입
+                  </button>
+                </div>
+              )}
+
+              <div className="flex-1 overflow-y-auto mb-4 relative">
+                 <EditorContent editor={editor} className="h-full" />
               </div>
-              <button 
-                onClick={insertAdTag}
-                className="text-xs font-bold bg-orange-100 px-2 py-1 rounded hover:bg-orange-200"
-              >
-                자동 삽입
-              </button>
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <div className="text-sm text-gray-500">
+                  글자 수: <span className="font-bold text-olive-dark">{charCount}</span>자
+                </div>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    내용 복사
+                  </button>
+                  <button
+                    onClick={() => router.push(`/my-campaigns/${campaignId}`)}
+                    className="flex items-center px-4 py-2 bg-olive hover:bg-olive-light text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    URL 제출하러 가기
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col">
+              <h3 className="font-bold text-lg mb-4 text-olive-dark">판매할 상품 선택하기</h3>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {mockProducts.map((p) => (
+                  <div 
+                    key={p.id}
+                    onClick={() => setSelectedProductId(p.id)}
+                    className={`cursor-pointer border rounded-xl overflow-hidden transition-all ${
+                      selectedProductId === p.id ? 'border-olive ring-2 ring-olive/20' : 'border-gray-200 hover:border-olive/50'
+                    }`}
+                  >
+                    <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                      <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="p-3">
+                      <p className="font-semibold text-sm line-clamp-1">{p.name}</p>
+                      <p className="font-bold text-olive-dark mt-1">{p.price.toLocaleString()}원</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {selectedProductId && (
+                <div className="bg-neutral p-4 rounded-xl border border-gray-100 mb-4">
+                  <p className="text-sm font-medium text-gray-600 mb-2">생성될 레퍼럴 링크 (자동 내 코드 포함)</p>
+                  <div className="bg-white p-2 rounded border text-sm text-gray-500 break-all">
+                    https://anting.app/shop/products/{selectedProductId}?ref={myCode}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-auto pt-4 border-t border-gray-100 flex justify-end">
+                <button
+                  onClick={handleTagProduct}
+                  disabled={!selectedProductId || taggingStatus === 'saving'}
+                  className="bg-olive hover:bg-olive-light text-white px-6 py-2 rounded-full font-bold transition-colors disabled:opacity-50"
+                >
+                  {taggingStatus === 'saving' ? '저장 중...' : 
+                   taggingStatus === 'success' ? '저장 완료!' : '상품 태깅 완료하기'}
+                </button>
+              </div>
+              
+              {taggingStatus === 'success' && referralLink && (
+                <div className="mt-4 bg-green-50 text-green-700 p-3 rounded-xl text-sm flex justify-between items-center">
+                  <span>상품 태깅이 완료되었습니다!</span>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText('https://anting.app' + referralLink);
+                      alert('링크가 복사되었습니다.');
+                    }}
+                    className="font-bold bg-green-100 px-3 py-1 rounded-lg hover:bg-green-200"
+                  >
+                    링크 복사
+                  </button>
+                </div>
+              )}
             </div>
           )}
-
-          <div className="flex-1 overflow-y-auto mb-4 relative">
-             <EditorContent editor={editor} className="h-full" />
-          </div>
-
-          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-            <div className="text-sm text-gray-500">
-              글자 수: <span className="font-bold text-olive-dark">{charCount}</span>자
-            </div>
-            
-            <div className="flex gap-2">
-              <button
-                onClick={handleCopy}
-                className="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                내용 복사
-              </button>
-              <button
-                onClick={() => router.push(`/my-campaigns/${campaignId}`)}
-                className="flex items-center px-4 py-2 bg-olive hover:bg-olive-light text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                URL 제출하러 가기
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

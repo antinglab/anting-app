@@ -236,3 +236,56 @@ export interface ReferralEarnings {
   buyerId: string;
   createdAt: Timestamp;
 }
+
+export interface Product {
+  id: string;
+  brandId: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl?: string;
+  sentimentSummary?: {
+    overallScore: number;
+    positiveRatio: number;
+    negativeRatio: number;
+    wordCloud: string[];
+    improvementPoints: string[];
+    lastUpdatedAt: Timestamp;
+  };
+  createdAt: Timestamp;
+}
+
+export interface TaggedPost {
+  id: string;
+  influencerId: string;
+  campaignId: string;
+  productId: string;
+  content: string;
+  contentPlatform: 'instagram' | 'blog' | 'tiktok';
+  postUrl?: string;
+  referralLink: string;
+  createdAt: Timestamp;
+}
+
+export interface ProductReview {
+  id: string;
+  productId: string;
+  userId: string;
+  rating: number;
+  text: string;
+  imageUrls?: string[];
+  sentiment?: {
+    sentiment: 'positive' | 'neutral' | 'negative';
+    score: number;
+    keywords: string[];
+    issues: string[];
+  };
+  createdAt: Timestamp;
+}
+
+export interface ReferralClick {
+  id: string;
+  code: string;
+  productId: string;
+  clickedAt: Timestamp;
+}
