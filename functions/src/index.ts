@@ -52,6 +52,12 @@ export * from "./ai/generatePost";
 export * from "./ai/image";
 export * from "./ai/video";
 export * from "./ai/guide";
+export * from "./ai/match";
+export * from "./ai/brief";
+export * from "./ai/csBot";
 
 // Export referrals logic
 export * from "./referrals";
+
+// Export insights logic
+export * from "./insights";

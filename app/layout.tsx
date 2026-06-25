@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   },
 };
 
+import CSBot from "@/components/ui/CSBot";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,6 +25,7 @@ export default function RootLayout({
       <body className="antialiased font-pretendard">
         <AuthProvider>
           {children}
+          <CSBot />
         </AuthProvider>
       </body>
     </html>

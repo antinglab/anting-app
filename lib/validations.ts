@@ -36,4 +36,6 @@ export const crewMemberSchema = z.object({
     }, "연락처는 010 또는 011로 시작하며, 10-11자리의 숫자여야 합니다"),
   email: z.string().min(1, "이메일을 입력해주세요").email("올바른 이메일 형식이 아닙니다"),
   region: z.string().min(1, "거주 지역을 선택해주세요"),
+  instagramConnected: z.boolean().optional(),
+  instagramHandle: z.string().optional(),
 });

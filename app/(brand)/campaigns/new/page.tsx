@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, storage, functions } from '@/lib/firebase';
 import { CampaignStatus } from '@/types';
+import { TipTapEditor } from '@/components/ui/TipTapEditor';
 
 export default function NewCampaignPage() {
   const router = useRouter();
@@ -30,6 +32,12 @@ export default function NewCampaignPage() {
   const [requiredPhrases, setRequiredPhrases] = useState<string[]>([]);
   const [forbiddenWords, setForbiddenWords] = useState<string[]>([]);
   const [requiredHashtags, setRequiredHashtags] = useState<string[]>([]);
+
+  // AI Brief Modal State
+  const [isBriefModalOpen, setIsBriefModalOpen] = useState(false);
+  const [briefTarget, setBriefTarget] = useState('');
+  const [briefHighlights, setBriefHighlights] = useState('');
+  const [briefLoading, setBriefLoading] = useState(false);
 
   // Helpers
   const handleNext = () => setStep((s) => Math.min(s + 1, 3));
@@ -58,6 +66,41 @@ export default function NewCampaignPage() {
         return;
       }
       setProductImages((prev) => [...prev, ...filesArray]);
+    }
+  };
+
+  const handleGenerateBrief = async () => {
+    if (!productName || !category || !briefTarget || !briefHighlights) {
+      alert('제품명, 카테고리, 타겟 고객, 강조 포인트를 모두 입력해주세요.');
+      return;
+    }
+    setBriefLoading(true);
+    try {
+      const generateBriefCallable = httpsCallable(functions, 'generateBrief');
+      const result = await generateBriefCallable({
+        productName,
+        category,
+        target: briefTarget,
+        highlights: briefHighlights,
+      });
+      const data = result.data as { success?: boolean; data?: { editorHtml?: string; requiredPhrases?: string[]; forbiddenWords?: string[]; requiredHashtags?: string[] }; error?: string };
+      if (data.success && data.data) {
+        const generated = data.data;
+        if (generated.editorHtml) setGuidelines(generated.editorHtml);
+        if (generated.requiredPhrases) setRequiredPhrases(generated.requiredPhrases);
+        if (generated.forbiddenWords) setForbiddenWords(generated.forbiddenWords);
+        if (generated.requiredHashtags) setRequiredHashtags(generated.requiredHashtags);
+        setIsBriefModalOpen(false);
+        alert('AI 브리프 작성이 완료되었습니다!');
+      } else {
+        alert('AI 생성 실패: ' + (data.error || '알 수 없는 오류'));
+      }
+    } catch (err: unknown) {
+      console.error(err);
+      const error = err as Error;
+      alert('AI 생성 중 오류가 발생했습니다: ' + error.message);
+    } finally {
+      setBriefLoading(false);
     }
   };
 
@@ -181,10 +224,18 @@ export default function NewCampaignPage() {
 
       {step === 3 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-olive">단계 3 — 원고 가이드</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-olive">단계 3 — 원고 가이드</h2>
+            <button
+              onClick={() => setIsBriefModalOpen(true)}
+              className="bg-accent text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-opacity-90"
+            >
+              ✨ AI 브리프 작성 도움받기
+            </button>
+          </div>
           <div>
             <label className="block text-sm font-medium mb-1">가이드라인 상세</label>
-            <textarea className="w-full border-olive rounded-xl p-2 focus:ring-olive border h-24" value={guidelines} onChange={(e) => setGuidelines(e.target.value)} />
+            <TipTapEditor value={guidelines} onChange={setGuidelines} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">필수 포함 문구 (Enter로 추가)</label>
@@ -229,6 +280,31 @@ export default function NewCampaignPage() {
           </div>
         )}
       </div>
+
+      {isBriefModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[24px] p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4 font-['Pretendard']">✨ AI 브리프 작성 도우미</h3>
+            <p className="text-sm text-gray-500 mb-4">타겟 고객과 강조 포인트를 입력하시면, Gemini AI가 나노인플루언서 맞춤형 원고 가이드를 작성해 드립니다.</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">타겟 고객 (예: 20대 여성, 민감성 피부)</label>
+                <input type="text" className="w-full border-olive rounded-xl p-2 focus:ring-olive border" value={briefTarget} onChange={(e) => setBriefTarget(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">강조 포인트 3가지 (예: 비건 인증, 끈적임 없음, 촉촉함)</label>
+                <textarea className="w-full border-olive rounded-xl p-2 focus:ring-olive border h-20" value={briefHighlights} onChange={(e) => setBriefHighlights(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button onClick={() => setIsBriefModalOpen(false)} className="px-4 py-2 rounded-full border border-gray-300 text-gray-700">취소</button>
+              <button onClick={handleGenerateBrief} disabled={briefLoading} className="px-4 py-2 rounded-full bg-olive text-white disabled:bg-opacity-50">
+                {briefLoading ? '생성 중...' : '생성하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

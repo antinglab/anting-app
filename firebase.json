@@ -35,12 +35,24 @@
         "destination": "/join/index.html"
       },
       {
+        "source": "/test",
+        "destination": "/test/index.html"
+      },
+      {
+        "source": "/test/",
+        "destination": "/test/index.html"
+      },
+      {
         "source": "/campaigns/*/applicants",
         "destination": "/campaigns/index/applicants/index.html"
       },
       {
         "source": "/campaigns/*/contents",
         "destination": "/campaigns/index/contents/index.html"
+      },
+      {
+        "source": "/campaigns/*/recommended",
+        "destination": "/campaigns/index/recommended/index.html"
       },
       {
         "source": "/campaigns/*",

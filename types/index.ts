@@ -128,6 +128,8 @@ export interface CrewMemberForm {
   phone: string;
   email: string;
   region: string;
+  instagramConnected?: boolean;
+  instagramHandle?: string;
 }
 
 export interface CrewMember {
@@ -144,6 +146,8 @@ export interface CrewMember {
   source: string;
   memo?: string;
   status?: 'active' | 'contacted' | 'converted';
+  instagramConnected?: boolean;
+  instagramHandle?: string;
 }
 
 export type UserRole = 'brand' | 'influencer' | 'admin';

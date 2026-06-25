@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { crewMemberSchema } from '@/lib/validations';
 import { CrewMemberForm } from '@/types';
-import { Check, Share2, Home } from 'lucide-react';
+import { Check, Share2, Home, Camera } from 'lucide-react';
 import Link from 'next/link';
 import { sendWelcomeEmail } from '@/lib/send-welcome';
 import { sendTelegramAlert } from '@/lib/send-telegram';
@@ -41,7 +41,9 @@ export default function JoinForm() {
       gender: 'none',
       phone: '',
       email: '',
-      region: ''
+      region: '',
+      instagramConnected: false,
+      instagramHandle: ''
     }
   });
 
@@ -72,6 +74,8 @@ export default function JoinForm() {
         resultType: resultType || 'unknown',
         createdAt: serverTimestamp(),
         source: 'mvp_beta',
+        instagramConnected: data.instagramConnected || false,
+        instagramHandle: data.instagramHandle || null,
       });
       
       // 환영 이메일 발송
@@ -156,6 +160,14 @@ export default function JoinForm() {
   }
 
   const genderValue = watch('gender');
+  const instagramConnected = watch('instagramConnected');
+  
+  const handleInstagramConnect = () => {
+    // Mock Instagram API connection
+    setValue('instagramConnected', true, { shouldValidate: true });
+    setValue('instagramHandle', '@anting_influencer', { shouldValidate: true });
+    alert('인스타그램 계정이 연동되었습니다! (MVP Mock)');
+  };
 
   return (
     <div className="max-w-xl mx-auto w-full bg-white rounded-[24px] shadow-[0_4px_24px_rgba(107,124,63,0.12)] border border-olive/10 overflow-hidden">
@@ -270,11 +282,36 @@ export default function JoinForm() {
             {errors.region && <p className="text-xs text-red-500 font-medium">{errors.region.message}</p>}
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-olive-dark block">SNS 연동 (필수)</label>
+            <div className="flex gap-4 items-center">
+              <button
+                type="button"
+                onClick={handleInstagramConnect}
+                disabled={instagramConnected}
+                className={`flex-1 py-3 px-4 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                  instagramConnected
+                    ? 'bg-blue-50 border-blue-200 text-blue-600'
+                    : 'bg-white border-pink-500 text-pink-600 hover:bg-pink-50'
+                }`}
+              >
+                <Camera className="w-5 h-5" />
+                {instagramConnected ? '인스타그램 연동 완료' : '인스타그램 연동하기'}
+              </button>
+            </div>
+            {instagramConnected && (
+              <p className="text-xs text-blue-600 font-medium mt-2">연동된 계정: {watch('instagramHandle')}</p>
+            )}
+            {!instagramConnected && (
+              <p className="text-xs text-olive-gray font-medium mt-2">캠페인 성과 자동 집계를 위해 인스타그램 연동이 필요합니다.</p>
+            )}
+          </div>
+
           <button
             type="submit"
             disabled={!isValid || isLoading}
             className={`w-full font-bold rounded-full h-14 flex items-center justify-center gap-2 transition-all duration-300 shadow-md ${
-              !isValid || isLoading
+              !isValid || isLoading || !instagramConnected
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-olive text-white hover:bg-olive-dark cursor-pointer'
             }`}
