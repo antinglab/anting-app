@@ -64,5 +64,10 @@ export * from "./referrals";
 // Export insights logic
 export * from "./insights";
 
+// Export gamification, retention, and new referrals logic
+export * from "./gamification";
+export * from "./retention";
+export * from "./referralsExt";
+
 // Export abuse detection logic
 export * from "./abuseDetection";
