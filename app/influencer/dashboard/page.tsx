@@ -14,6 +14,11 @@ export default function InfluencerDashboard() {
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [loadingCode, setLoadingCode] = useState(false);
   const [userUid, setUserUid] = useState<string | null>(null);
+  const [qualityData, setQualityData] = useState({
+    score: 0,
+    tier: 'Bronze',
+    improvementPoints: [] as string[]
+  });
 
   useEffect(() => {
     const auth = getAuth();
@@ -30,6 +35,11 @@ export default function InfluencerDashboard() {
             if (data.paybackBalance !== undefined) {
               setEarnings(prev => ({ ...prev, balance: data.paybackBalance }));
             }
+            setQualityData({
+              score: data.qualityScore || 0,
+              tier: data.tier || 'Bronze',
+              improvementPoints: data.improvementPoints || []
+            });
           }
         });
       }
@@ -103,24 +113,57 @@ export default function InfluencerDashboard() {
       <h1 className="text-2xl font-bold font-pretendard text-olive-dark">내 대시보드</h1>
 
       {/* Earnings Card */}
-      <div className="bg-olive-dark text-white p-6 rounded-3xl shadow-lg relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-32 h-32 bg-olive/20 rounded-bl-full"></div>
-        <div className="relative z-10">
-          <p className="text-white/80 text-sm font-medium mb-1">포인트 잔액</p>
-          <div className="flex items-end gap-2 mb-6">
-            <h2 className="text-4xl font-bold font-serifDisplay text-accent">{earnings.balance.toLocaleString()}</h2>
-            <span className="text-accent font-medium pb-1">P</span>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-white/60 mb-1">이번 달 획득</p>
-              <p className="text-lg font-medium">+{earnings.monthly.toLocaleString()}P</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-olive-dark text-white p-6 rounded-3xl shadow-lg relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-32 h-32 bg-olive/20 rounded-bl-full"></div>
+          <div className="relative z-10">
+            <p className="text-white/80 text-sm font-medium mb-1">포인트 잔액</p>
+            <div className="flex items-end gap-2 mb-6">
+              <h2 className="text-4xl font-bold font-serifDisplay text-accent">{earnings.balance.toLocaleString()}</h2>
+              <span className="text-accent font-medium pb-1">P</span>
             </div>
-            <button className="bg-accent text-olive-dark px-6 py-2.5 rounded-full font-bold text-sm hover:opacity-90 transition-opacity">
-              출금 신청
-            </button>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-white/60 mb-1">이번 달 획득</p>
+                <p className="text-lg font-medium">+{earnings.monthly.toLocaleString()}P</p>
+              </div>
+              <button className="bg-accent text-olive-dark px-6 py-2.5 rounded-full font-bold text-sm hover:opacity-90 transition-opacity">
+                출금 신청
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Quality Score Card */}
+        <div className="bg-white p-6 rounded-3xl shadow-lg border border-olive-pale relative overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-olive-dark">내 품질 스코어</h2>
+            <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+              qualityData.tier === 'Platinum' ? 'bg-purple-100 text-purple-700' :
+              qualityData.tier === 'Gold' ? 'bg-yellow-100 text-yellow-700' :
+              qualityData.tier === 'Silver' ? 'bg-gray-200 text-gray-700' :
+              'bg-orange-50 text-orange-800'
+            }`}>
+              {qualityData.tier} 등급
+            </span>
+          </div>
+          <div className="flex items-end gap-2 mb-4">
+            <h2 className="text-4xl font-bold font-serifDisplay text-olive-dark">{qualityData.score}</h2>
+            <span className="text-olive-gray font-medium pb-1">/ 100</span>
+          </div>
+          {qualityData.improvementPoints && qualityData.improvementPoints.length > 0 ? (
+            <div className="bg-neutral p-4 rounded-xl">
+              <p className="text-xs font-bold text-olive mb-2">💡 AI 품질 개선 포인트</p>
+              <ul className="list-disc list-inside text-sm text-olive-gray space-y-1">
+                {qualityData.improvementPoints.map((pt, idx) => (
+                  <li key={idx}>{pt}</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="text-sm text-olive-gray mt-4">꾸준히 활동하여 점수를 올려보세요!</p>
+          )}
         </div>
       </div>
 

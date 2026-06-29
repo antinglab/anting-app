@@ -63,3 +63,6 @@ export * from "./referrals";
 
 // Export insights logic
 export * from "./insights";
+
+// Export abuse detection logic
+export * from "./abuseDetection";

@@ -207,6 +207,7 @@ tr:hover td { background: #F0F4E8; }
     <div class="menu-items">
       <button class="menu-btn active" id="tab-crew" onclick="switchTab('crew')">앤팅크루 관리</button>
       <button class="menu-btn" id="tab-withdraw" onclick="switchTab('withdraw')">출금 관리</button>
+      <button class="menu-btn" id="tab-abuse" onclick="switchTab('abuse')">어뷰징 관리</button>
     </div>
     <button class="logout-btn" onclick="doLogout()">로그아웃</button>
   </div>
@@ -290,6 +291,44 @@ tr:hover td { background: #F0F4E8; }
       </div>
     </div>
 
+    <!-- 어뷰징 관리 뷰 -->
+    <div id="view-abuse" style="display:none;">
+      <div class="page-title">어뷰징 관리</div>
+      <div class="toolbar">
+        <button class="refresh-btn" onclick="loadAbuseData()">새로고침</button>
+      </div>
+      
+      <h3 style="margin-bottom:12px; color:#3D4A22;">의심 인플루언서</h3>
+      <div class="table-wrap" style="margin-bottom: 32px;">
+        <table>
+          <thead>
+            <tr>
+              <th>이름/닉네임</th><th>UID</th><th>사유</th>
+              <th>스팸률</th><th>탐지일시</th><th>상태</th><th>액션</th>
+            </tr>
+          </thead>
+          <tbody id="abuse-inf-table-body">
+            <tr><td colspan="7" class="loading-msg">데이터 로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-bottom:12px; color:#3D4A22;">의심 주문 (Fraud)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>주문ID</th><th>사용자ID</th><th>사유</th>
+              <th>IP</th><th>주문일시</th><th>상태</th><th>액션</th>
+            </tr>
+          </thead>
+          <tbody id="abuse-order-table-body">
+            <tr><td colspan="7" class="loading-msg">데이터 로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -333,10 +372,14 @@ let currentSelected = null;
 window.switchTab = function(tab) {
   document.getElementById('view-crew').style.display = tab === 'crew' ? 'block' : 'none';
   document.getElementById('view-withdraw').style.display = tab === 'withdraw' ? 'block' : 'none';
+  document.getElementById('view-abuse').style.display = tab === 'abuse' ? 'block' : 'none';
   document.getElementById('tab-crew').className = 'menu-btn' + (tab === 'crew' ? ' active' : '');
   document.getElementById('tab-withdraw').className = 'menu-btn' + (tab === 'withdraw' ? ' active' : '');
+  document.getElementById('tab-abuse').className = 'menu-btn' + (tab === 'abuse' ? ' active' : '');
   if (tab === 'withdraw') {
     loadWithdrawData();
+  } else if (tab === 'abuse') {
+    loadAbuseData();
   }
 };
 
@@ -682,6 +725,135 @@ window.rejectWithdraw = async function(id) {
   } catch(e) {
     alert('거절 실패: ' + e.message);
   }
+};
+
+window.updateWithdrawStatus = async function(id, status) {
+  if(!confirm(`상태를 '${status}'(으)로 변경하시겠습니까?`)) return;
+  try {
+    await updateDoc(doc(db, 'withdraw_requests', id), { status });
+    alert('처리되었습니다.');
+    loadWithdrawData();
+  } catch(e) { alert('오류: ' + e.message); }
+};
+
+// ── 어뷰징 관리 데이터 로드 ──
+let allAbuseInfs = [];
+let allAbuseOrders = [];
+
+window.loadAbuseData = async function() {
+  const infBody = document.getElementById('abuse-inf-table-body');
+  const orderBody = document.getElementById('abuse-order-table-body');
+  infBody.innerHTML = '<tr><td colspan="7" class="loading-msg">로딩 중...</td></tr>';
+  orderBody.innerHTML = '<tr><td colspan="7" class="loading-msg">로딩 중...</td></tr>';
+  
+  try {
+    const qInf = query(collection(db, 'influencers'));
+    const snapInf = await getDocs(qInf);
+    allAbuseInfs = snapInf.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.abuseFlag === true);
+    renderAbuseInfTable();
+  } catch (e) {
+    console.error(e);
+    infBody.innerHTML = `<tr><td colspan="7" class="empty-msg">데이터 로딩 실패: ${e.message}</td></tr>`;
+  }
+
+  try {
+    const qOrder = query(collection(db, 'orders'));
+    const snapOrder = await getDocs(qOrder);
+    allAbuseOrders = snapOrder.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.status === 'fraud_review');
+    renderAbuseOrderTable();
+  } catch (e) {
+    console.error(e);
+    orderBody.innerHTML = `<tr><td colspan="7" class="empty-msg">데이터 로딩 실패: ${e.message}</td></tr>`;
+  }
+};
+
+window.renderAbuseInfTable = function() {
+  const tbody = document.getElementById('abuse-inf-table-body');
+  if (allAbuseInfs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">의심 인플루언서가 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allAbuseInfs.map(inf => {
+    const date = inf.abuseDetectedAt?.toDate?.() ? inf.abuseDetectedAt.toDate().toLocaleString('ko-KR') : '';
+    return `
+      <tr>
+        <td>${inf.nickname || inf.name || '-'}</td>
+        <td>${inf.id}</td>
+        <td>${inf.abuseReason || '-'}</td>
+        <td>${inf.spamRate != null ? inf.spamRate + '%' : '-'}</td>
+        <td>${date}</td>
+        <td>
+          <select class="status-select" onchange="updateInfStatus('${inf.id}', this.value)">
+            <option value="false">정상</option>
+            <option value="true" selected>제한됨(Abuse)</option>
+          </select>
+        </td>
+        <td>
+          <button class="btn-approve" onclick="resolveAbuseInf('${inf.id}', false)">해제</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+};
+
+window.renderAbuseOrderTable = function() {
+  const tbody = document.getElementById('abuse-order-table-body');
+  if (allAbuseOrders.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">의심 주문이 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allAbuseOrders.map(order => {
+    const date = order.createdAt?.toDate?.() ? order.createdAt.toDate().toLocaleString('ko-KR') : '';
+    return `
+      <tr>
+        <td>${order.id}</td>
+        <td>${order.userId || '-'}</td>
+        <td>${order.fraudReason || '-'}</td>
+        <td>${order.ip || '-'}</td>
+        <td>${date}</td>
+        <td><span class="badge badge-inf">${order.status}</span></td>
+        <td>
+          <button class="btn-reject" onclick="invalidateOrder('${order.id}')">주문 무효화</button>
+          <button class="btn-approve" onclick="approveOrder('${order.id}')">정상 승인</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+};
+
+window.updateInfStatus = async function(id, abuseFlagStr) {
+  const abuseFlag = abuseFlagStr === 'true';
+  try {
+    await updateDoc(doc(db, 'influencers', id), { abuseFlag });
+    alert('계정 상태가 업데이트되었습니다.');
+  } catch(e) { alert('오류: ' + e.message); }
+};
+
+window.resolveAbuseInf = async function(id) {
+  if(!confirm('계정 제한을 해제하시겠습니까?')) return;
+  try {
+    await updateDoc(doc(db, 'influencers', id), { abuseFlag: false, abuseReason: null });
+    alert('해제되었습니다.');
+    loadAbuseData();
+  } catch(e) { alert('오류: ' + e.message); }
+};
+
+window.invalidateOrder = async function(id) {
+  if(!confirm('해당 주문을 무효화(취소)하시겠습니까?')) return;
+  try {
+    await updateDoc(doc(db, 'orders', id), { status: 'cancelled', cancelReason: '어뷰징 주문 무효화' });
+    alert('처리되었습니다.');
+    loadAbuseData();
+  } catch(e) { alert('오류: ' + e.message); }
+};
+
+window.approveOrder = async function(id) {
+  if(!confirm('해당 주문을 정상으로 승인하시겠습니까?')) return;
+  try {
+    await updateDoc(doc(db, 'orders', id), { status: 'completed' });
+    alert('처리되었습니다.');
+    loadAbuseData();
+  } catch(e) { alert('오류: ' + e.message); }
 };
 </script>
 </body>

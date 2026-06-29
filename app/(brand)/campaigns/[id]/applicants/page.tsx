@@ -12,7 +12,7 @@ export default function ApplicantsManagePage() {
   const campaignId = params.id as string;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [applications, setApplications] = useState<(Application & { nickname?: string, followerCount?: number, region?: string })[]>([]);
+  const [applications, setApplications] = useState<(Application & { nickname?: string, followerCount?: number, region?: string, tier?: string, qualityScore?: number })[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
@@ -34,7 +34,9 @@ export default function ApplicantsManagePage() {
         ...app,
         nickname: `인플루언서_${index + 1}`,
         followerCount: 5000 + (index * 1000),
-        region: index % 2 === 0 ? '서울' : '부산'
+        region: index % 2 === 0 ? '서울' : '부산',
+        tier: ['Bronze', 'Silver', 'Gold', 'Platinum'][index % 4],
+        qualityScore: 40 + (index * 15)
       }));
 
       setApplications(augmentedApps);
@@ -134,6 +136,7 @@ export default function ApplicantsManagePage() {
           <thead>
             <tr className="bg-neutral text-olive-gray text-sm border-b border-gray-100">
               <th className="px-6 py-4 font-medium">인플루언서</th>
+              <th className="px-6 py-4 font-medium">등급</th>
               <th className="px-6 py-4 font-medium">지역</th>
               <th className="px-6 py-4 font-medium">신청일</th>
               <th className="px-6 py-4 font-medium">상태</th>
@@ -151,6 +154,17 @@ export default function ApplicantsManagePage() {
                   <td className="px-6 py-4">
                     <div className="font-semibold text-olive-dark">{app.nickname}</div>
                     <div className="text-xs text-olive-gray">팔로워 {app.followerCount?.toLocaleString()}명 · ID: {app.influencerId}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 text-xs rounded-full font-bold ${
+                      app.tier === 'Platinum' ? 'bg-purple-100 text-purple-700' :
+                      app.tier === 'Gold' ? 'bg-yellow-100 text-yellow-700' :
+                      app.tier === 'Silver' ? 'bg-gray-200 text-gray-700' :
+                      'bg-orange-50 text-orange-800'
+                    }`}>
+                      {app.tier || 'Bronze'}
+                    </span>
+                    <div className="text-[10px] text-olive-gray mt-1">{app.qualityScore}점</div>
                   </td>
                   <td className="px-6 py-4 text-sm">{app.region}</td>
                   <td className="px-6 py-4 text-sm text-olive-gray">
