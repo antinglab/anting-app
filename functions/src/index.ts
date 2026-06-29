@@ -71,3 +71,9 @@ export * from "./referralsExt";
 
 // Export abuse detection logic
 export * from "./abuseDetection";
+
+// Export recommendations
+export * from "./ai/recommendations";
+
+// Export subscriptions
+export * from "./subscriptions";
