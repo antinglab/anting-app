@@ -1,16 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAuth } from "firebase/auth";
-import { getFirestore, collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import { app } from "@/lib/firebase";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
 
-const db = getFirestore(app);
-const auth = getAuth(app);
+interface UserData {
+  referralCode?: string;
+  [key: string]: unknown;
+}
+
+interface FriendData {
+  id: string;
+  name?: string;
+  nickname?: string;
+  campaignCompleteCount: number;
+  createdAt?: { toDate?: () => Date };
+  [key: string]: unknown;
+}
 
 export default function ReferralsPage() {
-  const [userData, setUserData] = useState<any>(null);
-  const [referredUsers, setReferredUsers] = useState<any[]>([]);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [referredUsers, setReferredUsers] = useState<FriendData[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -28,7 +38,7 @@ export default function ReferralsPage() {
             // Assuming we query 'users' where 'referredBy' == user.uid
             const q = query(collection(db, "users"), where("referredBy", "==", user.uid));
             const querySnapshot = await getDocs(q);
-            const friends = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            const friends = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() } as FriendData));
             setReferredUsers(friends);
           }
         }
