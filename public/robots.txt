@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://anting-app-0001.web.app
+
+# Sitemaps
+Sitemap: https://anting-app-0001.web.app/sitemap.xml

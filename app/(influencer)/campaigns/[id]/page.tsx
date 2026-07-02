@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Campaign, Application } from '@/types';
+import { logEvent } from '@/lib/analytics';
 
 export default function CampaignDetailPage() {
   const params = useParams();
@@ -85,6 +86,13 @@ export default function CampaignDetailPage() {
       };
       await addDoc(collection(db, 'applications'), applicationData);
       setHasApplied(true);
+      
+      logEvent('campaign_apply', {
+        campaignId,
+        brandId: campaign.brandId,
+        influencerId: MOCK_INFLUENCER_ID
+      });
+
       alert('신청이 완료되었습니다!');
       router.push('/influencer/dashboard');
     } catch (error) {

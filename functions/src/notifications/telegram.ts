@@ -4,6 +4,78 @@ import { getFirestore } from "firebase-admin/firestore";
 
 
 import { sendTelegramMessage } from "../utils/telegram";
+import { onRequest } from "firebase-functions/v2/https";
+
+export const handleTelegramCommand = onRequest(async (req, res) => {
+  if (req.method !== "POST") {
+    res.status(405).send("Method Not Allowed");
+    return;
+  }
+
+  const update = req.body;
+  if (!update || !update.message || !update.message.text) {
+    res.status(200).send("OK");
+    return;
+  }
+
+
+  const text = update.message.text.trim();
+  const db = getFirestore();
+
+  try {
+    if (text.startsWith("/stats")) {
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      
+      const snapUsers = await db.collection("crew_members").get();
+      const todayUsers = snapUsers.docs.filter(d => {
+        const cDate = d.data().createdAt?.toDate?.();
+        return cDate && cDate >= today;
+      }).length;
+
+      const snapCamps = await db.collection("campaigns").get();
+      const activeCamps = snapCamps.docs.filter(d => ["recruiting", "delivering"].includes(d.data().status)).length;
+
+      const snapWithdraws = await db.collection("withdraw_requests").where("status", "==", "pending").get();
+      const pendingWithdraws = snapWithdraws.size;
+
+      const reply = `📊 [오늘의 통계]\n- 오늘 가입자: ${todayUsers}명\n- 활성 캠페인: ${activeCamps}개\n- 출금 대기: ${pendingWithdraws}건`;
+      await sendTelegramMessage(reply);
+
+    } else if (text.startsWith("/crew")) {
+      const snapUsers = await db.collection("crew_members")
+        .orderBy("createdAt", "desc").limit(5).get();
+      
+      const lines = snapUsers.docs.map(d => {
+        const u = d.data();
+        const t = u.userType === "brand" ? "브랜드" : "인플루언서";
+        return `- ${u.name || u.nickname} (${t})`;
+      });
+      const reply = `👥 [최신 가입자 5명]\n${lines.join("\\n")}`;
+      await sendTelegramMessage(reply);
+
+    } else if (text.startsWith("/pending")) {
+      const snapWithdraws = await db.collection("withdraw_requests")
+        .where("status", "==", "pending").orderBy("createdAt", "desc").limit(10).get();
+      
+      if (snapWithdraws.empty) {
+        await sendTelegramMessage(`💸 [출금 대기 목록]\n현재 대기 중인 출금 요청이 없습니다.`);
+      } else {
+        const lines = snapWithdraws.docs.map(d => {
+          const w = d.data();
+          return `- ${w.uid}: ${w.amount?.toLocaleString()}P`;
+        });
+        const reply = `💸 [출금 대기 목록 (최대 10건)]\n${lines.join("\\n")}`;
+        await sendTelegramMessage(reply);
+      }
+    }
+    
+    res.status(200).send("OK");
+  } catch (error) {
+    console.error("Telegram Webhook Error:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
 
 export const onApplicationUpdated = onDocumentUpdated("applications/{applicationId}", async (event) => {
   const before = event.data?.before.data();

@@ -4,6 +4,7 @@ import React from "react";
 import { useSearchParams } from "next/navigation";
 import { UserType, Answer, ResultType, ResultData } from "@/types";
 import { analyzeQuizResult } from "@/lib/quiz-analyzer";
+import { logEvent } from "@/lib/analytics";
 import { CheckCircle2, ChevronRight, RefreshCw, Share2 } from "lucide-react";
 import Link from "next/link";
 
@@ -103,6 +104,13 @@ export default function ResultComponent() {
 
   const resultType = analyzeQuizResult(userType, answers);
   const resultData = RESULT_DATA_MAP[resultType];
+
+  React.useEffect(() => {
+    logEvent('quiz_complete', {
+      userType,
+      resultType
+    });
+  }, [userType, resultType]);
 
   return (
     <div className="max-w-xl mx-auto w-full space-y-8">

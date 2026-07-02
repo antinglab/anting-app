@@ -12,6 +12,7 @@ import { Check, Share2, Home, Camera } from 'lucide-react';
 import Link from 'next/link';
 import { sendWelcomeEmail } from '@/lib/send-welcome';
 import { sendTelegramAlert } from '@/lib/send-telegram';
+import { logEvent } from '@/lib/analytics';
 
 const REGIONS = [
   '서울', '경기', '인천', '부산', '대구', '광주', '대전', '울산', 
@@ -92,6 +93,11 @@ export default function JoinForm() {
         phone: data.phone,
         email: data.email,
         region: data.region,
+        userType: userType || 'unknown',
+        resultType: resultType || 'unknown',
+      });
+
+      logEvent('join_complete', {
         userType: userType || 'unknown',
         resultType: resultType || 'unknown',
       });

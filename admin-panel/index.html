@@ -6,6 +6,7 @@
 <title>앤팅 어드민</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, 'Pretendard', sans-serif;
@@ -206,8 +207,10 @@ tr:hover td { background: #F0F4E8; }
     <div class="sidebar-label">ADMIN</div>
     <div class="menu-items">
       <button class="menu-btn active" id="tab-crew" onclick="switchTab('crew')">앤팅크루 관리</button>
+      <button class="menu-btn" id="tab-campaign" onclick="switchTab('campaign')">캠페인 현황</button>
       <button class="menu-btn" id="tab-withdraw" onclick="switchTab('withdraw')">출금 관리</button>
       <button class="menu-btn" id="tab-abuse" onclick="switchTab('abuse')">어뷰징 관리</button>
+      <button class="menu-btn" id="tab-stats" onclick="switchTab('stats')">통계</button>
     </div>
     <button class="logout-btn" onclick="doLogout()">로그아웃</button>
   </div>
@@ -291,6 +294,31 @@ tr:hover td { background: #F0F4E8; }
       </div>
     </div>
 
+    <!-- 캠페인 관리 뷰 -->
+    <div id="view-campaign" style="display:none;">
+      <div class="page-title">캠페인 현황</div>
+      <div class="toolbar">
+        <button class="filter-btn active" id="btn-camp-all" onclick="setCampFilter('all')">전체</button>
+        <button class="filter-btn" id="btn-camp-recruiting" onclick="setCampFilter('recruiting')">모집중</button>
+        <button class="filter-btn" id="btn-camp-delivering" onclick="setCampFilter('delivering')">진행중</button>
+        <button class="filter-btn" id="btn-camp-completed" onclick="setCampFilter('completed')">완료됨</button>
+        <button class="refresh-btn" onclick="loadCampaignData()">새로고침</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>캠페인명</th><th>브랜드</th><th>리워드</th>
+              <th>신청자 수</th><th>마감일</th><th>상태</th>
+            </tr>
+          </thead>
+          <tbody id="campaign-table-body">
+            <tr><td colspan="6" class="loading-msg">데이터 로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- 어뷰징 관리 뷰 -->
     <div id="view-abuse" style="display:none;">
       <div class="page-title">어뷰징 관리</div>
@@ -326,6 +354,43 @@ tr:hover td { background: #F0F4E8; }
             <tr><td colspan="7" class="loading-msg">데이터 로딩 중...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    </div>
+
+    <!-- 통계 뷰 -->
+    <div id="view-stats" style="display:none;">
+      <div class="page-title">통계 대시보드</div>
+      <div class="toolbar">
+        <button class="refresh-btn" onclick="loadStatsData()">데이터 새로고침</button>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">총 거래액 (GMV)</div>
+          <div class="kpi-value" id="stat-gmv" style="color:#6B7C3F">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">활성 캠페인 수</div>
+          <div class="kpi-value" id="stat-camp" style="color:#3D4A22">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">총 가입자</div>
+          <div class="kpi-value" id="stat-users" style="color:#C8B84A">-</div>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 24px;">
+        <div style="flex:2; background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
+          <h3 style="margin-bottom:12px; color:#3D4A22; font-size:16px;">최근 7일 가입 추이</h3>
+          <canvas id="signupsChart" height="250"></canvas>
+        </div>
+        <div style="flex:1; background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
+          <h3 style="margin-bottom:12px; color:#3D4A22; font-size:16px;">유저 유형 비율</h3>
+          <div style="width:100%; height:250px; display:flex; align-items:center; justify-content:center;">
+             <canvas id="userTypeChart"></canvas>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -370,16 +435,21 @@ let currentSelected = null;
 
 // ── 탭 전환 ──
 window.switchTab = function(tab) {
-  document.getElementById('view-crew').style.display = tab === 'crew' ? 'block' : 'none';
-  document.getElementById('view-withdraw').style.display = tab === 'withdraw' ? 'block' : 'none';
-  document.getElementById('view-abuse').style.display = tab === 'abuse' ? 'block' : 'none';
-  document.getElementById('tab-crew').className = 'menu-btn' + (tab === 'crew' ? ' active' : '');
-  document.getElementById('tab-withdraw').className = 'menu-btn' + (tab === 'withdraw' ? ' active' : '');
-  document.getElementById('tab-abuse').className = 'menu-btn' + (tab === 'abuse' ? ' active' : '');
+  ['crew', 'campaign', 'withdraw', 'abuse', 'stats'].forEach(t => {
+    const el = document.getElementById(`view-${t}`);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+    const btn = document.getElementById(`tab-${t}`);
+    if (btn) btn.className = 'menu-btn' + (t === tab ? ' active' : '');
+  });
+  
   if (tab === 'withdraw') {
     loadWithdrawData();
   } else if (tab === 'abuse') {
     loadAbuseData();
+  } else if (tab === 'campaign') {
+    loadCampaignData();
+  } else if (tab === 'stats') {
+    loadStatsData();
   }
 };
 
@@ -854,6 +924,155 @@ window.approveOrder = async function(id) {
     alert('처리되었습니다.');
     loadAbuseData();
   } catch(e) { alert('오류: ' + e.message); }
+};
+
+// ── 캠페인 관리 데이터 로드 ──
+let allCampaigns = [];
+let campFilter = 'all';
+
+window.loadCampaignData = async function() {
+  const tbody = document.getElementById('campaign-table-body');
+  tbody.innerHTML = '<tr><td colspan="6" class="loading-msg">로딩 중...</td></tr>';
+  try {
+    const q = query(collection(db, 'campaigns'), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    allCampaigns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderCampaignTable();
+  } catch(e) {
+    console.error(e);
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-msg">데이터 로딩 실패: ${e.message}</td></tr>`;
+  }
+};
+
+window.setCampFilter = function(filter) {
+  campFilter = filter;
+  ['all', 'recruiting', 'delivering', 'completed'].forEach(f => {
+    document.getElementById('btn-camp-' + f).className = 'filter-btn' + (f === filter ? ' active' : '');
+  });
+  renderCampaignTable();
+};
+
+window.renderCampaignTable = function() {
+  const tbody = document.getElementById('campaign-table-body');
+  const filtered = allCampaigns.filter(c => {
+    if (campFilter === 'all') return true;
+    return c.status === campFilter;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">해당하는 캠페인이 없습니다.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(c => {
+    const endDate = c.recruitEndDate ? new Date(c.recruitEndDate).toLocaleDateString('ko-KR') : '-';
+    let statusBadge = '<span class="badge">' + (c.status || '대기중') + '</span>';
+    if(c.status === 'recruiting') statusBadge = '<span class="badge badge-brand">모집중</span>';
+    else if(c.status === 'delivering') statusBadge = '<span class="badge" style="background:#028090;color:white;">진행중</span>';
+    else if(c.status === 'completed') statusBadge = '<span class="badge" style="background:#E5E7EB;color:#374151;">완료됨</span>';
+    
+    const applicantCount = c.applicantCount || 0;
+    return `<tr>
+      <td style="font-weight:600;color:#3D4A22;">${c.title || '-'}</td>
+      <td>${c.brandName || '-'}</td>
+      <td>${c.benefit ? c.benefit + 'P' : '-'}</td>
+      <td>${applicantCount}명</td>
+      <td>${endDate}</td>
+      <td>${statusBadge}</td>
+    </tr>`;
+  }).join('');
+};
+
+// ── 통계 대시보드 로드 ──
+let signupsChartInst = null;
+let userTypeChartInst = null;
+
+window.loadStatsData = async function() {
+  document.getElementById('stat-gmv').textContent = '로딩중';
+  document.getElementById('stat-camp').textContent = '로딩중';
+  document.getElementById('stat-users').textContent = '로딩중';
+
+  try {
+    // 1. 유저 통계
+    const qUsers = query(collection(db, 'crew_members'));
+    const snapUsers = await getDocs(qUsers);
+    const users = snapUsers.docs.map(d => d.data());
+    
+    document.getElementById('stat-users').textContent = users.length + '명';
+
+    let brands = 0; let influencers = 0;
+    const last7Days = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      last7Days[d.toLocaleDateString('ko-KR')] = 0;
+    }
+
+    users.forEach(u => {
+      if (u.userType === 'brand') brands++;
+      else influencers++;
+
+      if (u.createdAt?.toDate) {
+        const dStr = u.createdAt.toDate().toLocaleDateString('ko-KR');
+        if (last7Days[dStr] !== undefined) {
+          last7Days[dStr]++;
+        }
+      }
+    });
+
+    // 2. 캠페인 통계
+    const qCamps = query(collection(db, 'campaigns'));
+    const snapCamps = await getDocs(qCamps);
+    const activeCamps = snapCamps.docs.filter(d => ['recruiting', 'delivering'].includes(d.data().status)).length;
+    document.getElementById('stat-camp').textContent = activeCamps + '개';
+
+    // 3. GMV 통계 (단순 합산 - orders 컬렉션 활용)
+    let gmv = 0;
+    const qOrders = query(collection(db, 'orders'));
+    const snapOrders = await getDocs(qOrders);
+    snapOrders.docs.forEach(d => {
+      if (d.data().status !== 'cancelled' && d.data().amount) {
+        gmv += Number(d.data().amount);
+      }
+    });
+    document.getElementById('stat-gmv').textContent = '₩' + gmv.toLocaleString();
+
+    // 차트 그리기
+    const ctxSignups = document.getElementById('signupsChart').getContext('2d');
+    if(signupsChartInst) signupsChartInst.destroy();
+    signupsChartInst = new Chart(ctxSignups, {
+      type: 'line',
+      data: {
+        labels: Object.keys(last7Days).map(d => d.substring(5)),
+        datasets: [{
+          label: '신규 가입',
+          data: Object.values(last7Days),
+          borderColor: '#6B7C3F',
+          backgroundColor: 'rgba(107,124,63,0.1)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    const ctxType = document.getElementById('userTypeChart').getContext('2d');
+    if(userTypeChartInst) userTypeChartInst.destroy();
+    userTypeChartInst = new Chart(ctxType, {
+      type: 'pie',
+      data: {
+        labels: ['브랜드', '인플루언서'],
+        datasets: [{
+          data: [brands, influencers],
+          backgroundColor: ['#3D4A22', '#C8B84A']
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+  } catch (e) {
+    console.error(e);
+    alert('통계 데이터 로딩 실패: ' + e.message);
+  }
 };
 </script>
 </body>

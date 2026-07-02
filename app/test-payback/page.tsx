@@ -5,6 +5,7 @@ import { getAuth } from "firebase/auth";
 import { doc, updateDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { AppUser } from "@/types";
+import { logEvent } from "@/lib/analytics";
 
 export default function TestPaybackPage() {
   const [loading, setLoading] = useState(true);
@@ -94,6 +95,11 @@ export default function TestPaybackPage() {
         status: "completed"
       });
       
+      logEvent('purchase_complete', {
+        orderId,
+        amount: 100000
+      });
+
       setOrderStatus("completed");
       addLog(`주문 ${orderId} 상태가 'completed'로 변경되었습니다. (Cloud Function이 트리거되어 페이백이 계산되어야 합니다)`);
     } catch (e) {

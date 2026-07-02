@@ -8,6 +8,7 @@ import { getApp } from 'firebase/app';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { Campaign, Application } from '@/types';
+import { logEvent } from '@/lib/analytics';
 
 const STEPS = ['신청', '선발', '수령', '작성', '제출', '승인', '정산'];
 
@@ -137,6 +138,13 @@ export default function InfluencerCampaignStatusPage() {
         contentPlatform: platform,
         submittedAt: Timestamp.now()
       });
+
+      logEvent('content_submit', {
+        campaignId,
+        platform,
+        applicationId: application.id
+      });
+
       alert('콘텐츠 제출이 완료되었습니다!');
       fetchData(); // reload
     } catch (error) {
